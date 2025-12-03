@@ -2,12 +2,20 @@ package main
 
 import (
 	"log"
-	"ortak/internal/auth"
+	authHandler "ortak/internal/auth/handler"
+	authRepository "ortak/internal/auth/repository"
+	authService "ortak/internal/auth/service"
 	"ortak/internal/db"
 	"ortak/internal/middleware"
-	"ortak/internal/task"
-	"ortak/internal/team"
-	"ortak/internal/user"
+	taskHandler "ortak/internal/task/handler"
+	taskRepository "ortak/internal/task/repository"
+	taskService "ortak/internal/task/service"
+	teamHandler "ortak/internal/team/handler"
+	teamRepository "ortak/internal/team/repository"
+	teamService "ortak/internal/team/service"
+	userHandler "ortak/internal/user/handler"
+	userRepository "ortak/internal/user/repository"
+	userService "ortak/internal/user/service"
 
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
@@ -29,10 +37,21 @@ func main() {
 
 	r := gin.Default()
 
-	authHandler := auth.NewHandler()
-	userHandler := user.NewHandler()
-	teamHandler := team.NewHandler()
-	taskHandler := task.NewHandler()
+	authRepo := authRepository.NewRepositoryImpl()
+	authService := authService.NewService(authRepo)
+	authHandler := authHandler.NewHandler(authService)
+
+	userRepo := userRepository.NewRepositoryImpl()
+	userService := userService.NewService(userRepo)
+	userHandler := userHandler.NewHandler(userService)
+
+	teamRepo := teamRepository.NewRepositoryImpl()
+	teamService := teamService.NewService(teamRepo)
+	teamHandler := teamHandler.NewHandler(teamService)
+
+	taskRepo := taskRepository.NewRepositoryImpl()
+	taskService := taskService.NewService(taskRepo)
+	taskHandler := taskHandler.NewHandler(taskService)
 
 	api := r.Group("/api/v1")
 	{
@@ -55,6 +74,7 @@ func main() {
 		protected := api.Group("/")
 		protected.Use(middleware.AuthMiddleware())
 		{
+			protected.DELETE("/logout", authHandler.Logout)
 			protected.GET("/users", userHandler.GetUsers)
 			protected.POST("/users", userHandler.CreateUser)
 			protected.GET("/teams", teamHandler.GetTeams)

@@ -143,6 +143,27 @@ POST /login
 - `400 Bad Request` - Geçersiz veri formatı
 - `401 Unauthorized` - Hatalı kimlik bilgileri
 
+#### Çıkış Yap
+```http
+DELETE /logout
+```
+
+**Headers:**
+```
+Authorization: Bearer <token>
+```
+
+**Response (200 OK):**
+```json
+{
+  "message": "Logged out successfully"
+}
+```
+
+**Hata Durumları:**
+- `400 Bad Request` - Authorization header gerekli
+- `500 Internal Server Error` - Sunucu hatası
+
 ### Kullanıcı Yönetimi
 
 > **Not:** Tüm kullanıcı endpoints'leri JWT token gerektirir.
@@ -378,6 +399,10 @@ curl -X POST http://localhost:8080/api/v1/register \
 curl -X POST http://localhost:8080/api/v1/login \
   -H "Content-Type: application/json" \
   -d '{"email":"test@example.com","password":"password123"}'
+
+# Çıkış yap (token gerekli)
+curl -X DELETE http://localhost:8080/api/v1/logout \
+  -H "Authorization: Bearer <your-token>"
 
 # Takımları listele (token gerekli)
 curl -X GET http://localhost:8080/api/v1/teams \

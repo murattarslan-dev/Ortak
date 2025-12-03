@@ -1,18 +1,20 @@
-package team
+package handler
 
 import (
 	"net/http"
+	"ortak/internal/team"
+	"ortak/internal/team/service"
 
 	"github.com/gin-gonic/gin"
 )
 
 type Handler struct {
-	service *Service
+	service *service.Service
 }
 
-func NewHandler() *Handler {
+func NewHandler(service *service.Service) *Handler {
 	return &Handler{
-		service: NewService(),
+		service: service,
 	}
 }
 
@@ -26,7 +28,7 @@ func (h *Handler) GetTeams(c *gin.Context) {
 }
 
 func (h *Handler) CreateTeam(c *gin.Context) {
-	var req CreateTeamRequest
+	var req team.CreateTeamRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
