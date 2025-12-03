@@ -21,6 +21,7 @@
 
 - **POST** `/api/v1/register` - Kullanıcı kaydı
 - **POST** `/api/v1/login` - Giriş
+- **DELETE** `/api/v1/logout` - Çıkış
 - **GET** `/api/v1/users` - Kullanıcıları listele
 - **POST** `/api/v1/users` - Kullanıcı oluştur
 - **GET** `/api/v1/teams` - Takımları listele

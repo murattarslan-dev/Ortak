@@ -72,3 +72,35 @@ func TestService_Login_InvalidCredentials(t *testing.T) {
 		t.Error("Expected error for invalid credentials")
 	}
 }
+
+func TestService_Logout(t *testing.T) {
+	repo := repository.NewMockRepository()
+	service := NewService(repo)
+
+	// Register and login to get a token
+	registerReq := auth.RegisterRequest{
+		Username: "testuser",
+		Email:    "test@example.com",
+		Password: "password123",
+	}
+	response, _ := service.Register(registerReq)
+	token := response.Token
+
+	// Verify token is valid
+	_, exists := repo.IsTokenValid(token)
+	if !exists {
+		t.Error("Token should be valid before logout")
+	}
+
+	// Logout
+	err := service.Logout(token)
+	if err != nil {
+		t.Errorf("Expected no error, got %v", err)
+	}
+
+	// Verify token is invalid after logout
+	_, exists = repo.IsTokenValid(token)
+	if exists {
+		t.Error("Token should be invalid after logout")
+	}
+}

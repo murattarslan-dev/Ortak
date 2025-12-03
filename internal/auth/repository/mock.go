@@ -37,3 +37,7 @@ func (m *MockRepository) IsTokenValid(token string) (int, bool) {
 	userID, exists := m.tokens[token]
 	return userID, exists
 }
+
+func (m *MockRepository) RemoveToken(token string) {
+	delete(m.tokens, token)
+}

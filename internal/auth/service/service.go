@@ -46,6 +46,11 @@ func (s *Service) Register(req auth.RegisterRequest) (*auth.AuthResponse, error)
 	}, nil
 }
 
+func (s *Service) Logout(token string) error {
+	s.repo.RemoveToken(token)
+	return nil
+}
+
 func (s *Service) Login(req auth.LoginRequest) (*auth.AuthResponse, error) {
 	user := s.repo.GetUserByEmail(req.Email)
 	if user == nil {

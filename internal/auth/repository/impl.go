@@ -27,3 +27,7 @@ func (r *RepositoryImpl) AddToken(token string, userID int) {
 func (r *RepositoryImpl) IsTokenValid(token string) (int, bool) {
 	return r.storage.IsTokenValid(token)
 }
+
+func (r *RepositoryImpl) RemoveToken(token string) {
+	r.storage.RemoveToken(token)
+}

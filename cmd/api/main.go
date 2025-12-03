@@ -74,6 +74,7 @@ func main() {
 		protected := api.Group("/")
 		protected.Use(middleware.AuthMiddleware())
 		{
+			protected.DELETE("/logout", authHandler.Logout)
 			protected.GET("/users", userHandler.GetUsers)
 			protected.POST("/users", userHandler.CreateUser)
 			protected.GET("/teams", teamHandler.GetTeams)

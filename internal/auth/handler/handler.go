@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"ortak/internal/auth"
 	"ortak/internal/auth/service"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 )
@@ -48,4 +49,21 @@ func (h *Handler) Login(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, response)
+}
+
+func (h *Handler) Logout(c *gin.Context) {
+	authHeader := c.GetHeader("Authorization")
+	if authHeader == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Authorization header required"})
+		return
+	}
+
+	token := strings.TrimPrefix(authHeader, "Bearer ")
+	err := h.service.Logout(token)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Logged out successfully"})
 }
