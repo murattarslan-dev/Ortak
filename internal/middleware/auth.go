@@ -25,6 +25,14 @@ func AuthMiddleware() gin.HandlerFunc {
 			return
 		}
 
+		storage := utils.GetMemoryStorage()
+		userID, exists := storage.IsTokenValid(tokenString)
+		if !exists || userID != claims.UserID {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Token not found or invalid"})
+			c.Abort()
+			return
+		}
+
 		c.Set("user_id", claims.UserID)
 		c.Next()
 	}

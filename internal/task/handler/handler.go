@@ -1,18 +1,20 @@
-package task
+package handler
 
 import (
 	"net/http"
+	"ortak/internal/task"
+	"ortak/internal/task/service"
 
 	"github.com/gin-gonic/gin"
 )
 
 type Handler struct {
-	service *Service
+	service *service.Service
 }
 
-func NewHandler() *Handler {
+func NewHandler(service *service.Service) *Handler {
 	return &Handler{
-		service: NewService(),
+		service: service,
 	}
 }
 
@@ -26,7 +28,7 @@ func (h *Handler) GetTasks(c *gin.Context) {
 }
 
 func (h *Handler) CreateTask(c *gin.Context) {
-	var req CreateTaskRequest
+	var req task.CreateTaskRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return

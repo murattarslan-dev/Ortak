@@ -1,18 +1,20 @@
-package user
+package handler
 
 import (
 	"net/http"
+	"ortak/internal/user"
+	"ortak/internal/user/service"
 
 	"github.com/gin-gonic/gin"
 )
 
 type Handler struct {
-	service *Service
+	service *service.Service
 }
 
-func NewHandler() *Handler {
+func NewHandler(service *service.Service) *Handler {
 	return &Handler{
-		service: NewService(),
+		service: service,
 	}
 }
 
@@ -26,7 +28,7 @@ func (h *Handler) GetUsers(c *gin.Context) {
 }
 
 func (h *Handler) CreateUser(c *gin.Context) {
-	var req CreateUserRequest
+	var req user.CreateUserRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
