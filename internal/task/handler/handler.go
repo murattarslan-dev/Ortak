@@ -1,9 +1,9 @@
 package handler
 
 import (
-	"net/http"
 	"ortak/internal/task"
 	"ortak/internal/task/service"
+	"ortak/pkg/response"
 
 	"github.com/gin-gonic/gin"
 )
@@ -21,24 +21,24 @@ func NewHandler(service *service.Service) *Handler {
 func (h *Handler) GetTasks(c *gin.Context) {
 	tasks, err := h.service.GetTasks()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		response.SetError(c, 500, "Failed to get tasks")
 		return
 	}
-	c.JSON(http.StatusOK, tasks)
+	response.SetSuccess(c, "Tasks retrieved successfully", tasks)
 }
 
 func (h *Handler) CreateTask(c *gin.Context) {
 	var req task.CreateTaskRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		response.SetError(c, 400, "Invalid request format: "+err.Error())
 		return
 	}
 
 	task, err := h.service.CreateTask(req)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		response.SetError(c, 500, "Failed to create task")
 		return
 	}
 
-	c.JSON(http.StatusCreated, task)
+	response.SetCreated(c, "Task created successfully", task)
 }

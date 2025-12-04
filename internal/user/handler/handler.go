@@ -1,9 +1,9 @@
 package handler
 
 import (
-	"net/http"
 	"ortak/internal/user"
 	"ortak/internal/user/service"
+	"ortak/pkg/response"
 
 	"github.com/gin-gonic/gin"
 )
@@ -21,24 +21,24 @@ func NewHandler(service *service.Service) *Handler {
 func (h *Handler) GetUsers(c *gin.Context) {
 	users, err := h.service.GetUsers()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		response.SetError(c, 500, "Failed to get users")
 		return
 	}
-	c.JSON(http.StatusOK, users)
+	response.SetSuccess(c, "Users retrieved successfully", users)
 }
 
 func (h *Handler) CreateUser(c *gin.Context) {
 	var req user.CreateUserRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		response.SetError(c, 400, "Invalid request format: "+err.Error())
 		return
 	}
 
 	user, err := h.service.CreateUser(req)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		response.SetError(c, 500, "Failed to create user")
 		return
 	}
 
-	c.JSON(http.StatusCreated, user)
+	response.SetCreated(c, "User created successfully", user)
 }

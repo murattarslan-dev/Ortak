@@ -35,7 +35,13 @@ func main() {
 		defer database.Close()
 	}
 
-	r := gin.Default()
+	r := gin.New()
+
+	// Add middleware
+	r.Use(middleware.LoggerMiddleware())
+	r.Use(middleware.RecoveryMiddleware())
+	r.Use(middleware.ErrorMiddleware())
+	r.Use(middleware.FormatterMiddleware())
 
 	authRepo := authRepository.NewRepositoryImpl()
 	authService := authService.NewService(authRepo)
