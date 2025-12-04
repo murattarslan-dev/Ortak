@@ -42,3 +42,41 @@ func (h *Handler) CreateUser(c *gin.Context) {
 
 	response.SetCreated(c, "User created successfully", user)
 }
+
+func (h *Handler) GetUser(c *gin.Context) {
+	id := c.Param("id")
+	user, err := h.service.GetUserByID(id)
+	if err != nil {
+		response.SetError(c, 404, "User not found")
+		return
+	}
+	response.SetSuccess(c, "User retrieved successfully", user)
+}
+
+func (h *Handler) UpdateUser(c *gin.Context) {
+	id := c.Param("id")
+	var req user.UpdateUserRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.SetError(c, 400, "Invalid request format: "+err.Error())
+		return
+	}
+
+	user, err := h.service.UpdateUser(id, req)
+	if err != nil {
+		response.SetError(c, 500, "Failed to update user")
+		return
+	}
+
+	response.SetSuccess(c, "User updated successfully", user)
+}
+
+func (h *Handler) DeleteUser(c *gin.Context) {
+	id := c.Param("id")
+	err := h.service.DeleteUser(id)
+	if err != nil {
+		response.SetError(c, 500, "Failed to delete user")
+		return
+	}
+
+	response.SetSuccess(c, "User deleted successfully", nil)
+}

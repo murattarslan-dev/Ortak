@@ -8,6 +8,7 @@ import (
 	"ortak/internal/auth"
 	"ortak/internal/auth/repository"
 	"ortak/internal/auth/service"
+	"ortak/internal/middleware"
 	"testing"
 
 	"github.com/gin-gonic/gin"
@@ -20,19 +21,22 @@ func TestHandler_Register(t *testing.T) {
 	svc := service.NewService(repo)
 	handler := NewHandler(svc)
 
-	req := auth.RegisterRequest{
+	reqData := auth.RegisterRequest{
 		Username: "testuser",
 		Email:    "test@example.com",
 		Password: "password123",
 	}
 
-	jsonData, _ := json.Marshal(req)
+	jsonData, _ := json.Marshal(reqData)
 	w := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(w)
-	c.Request = httptest.NewRequest("POST", "/register", bytes.NewBuffer(jsonData))
-	c.Request.Header.Set("Content-Type", "application/json")
+	router := gin.New()
+	router.Use(middleware.ErrorMiddleware())
+	router.Use(middleware.FormatterMiddleware())
+	router.POST("/register", handler.Register)
 
-	handler.Register(c)
+	req := httptest.NewRequest("POST", "/register", bytes.NewBuffer(jsonData))
+	req.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(w, req)
 
 	if w.Code != http.StatusCreated {
 		t.Errorf("Expected status %d, got %d", http.StatusCreated, w.Code)
@@ -62,11 +66,14 @@ func TestHandler_Login(t *testing.T) {
 
 	jsonData, _ := json.Marshal(loginReq)
 	w := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(w)
-	c.Request = httptest.NewRequest("POST", "/login", bytes.NewBuffer(jsonData))
-	c.Request.Header.Set("Content-Type", "application/json")
+	router := gin.New()
+	router.Use(middleware.ErrorMiddleware())
+	router.Use(middleware.FormatterMiddleware())
+	router.POST("/login", handler.Login)
 
-	handler.Login(c)
+	req := httptest.NewRequest("POST", "/login", bytes.NewBuffer(jsonData))
+	req.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(w, req)
 
 	if w.Code != http.StatusOK {
 		t.Errorf("Expected status %d, got %d", http.StatusOK, w.Code)
