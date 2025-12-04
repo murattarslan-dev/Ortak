@@ -35,7 +35,13 @@ func main() {
 		defer database.Close()
 	}
 
-	r := gin.Default()
+	r := gin.New()
+
+	// Add middleware
+	r.Use(middleware.LoggerMiddleware())
+	r.Use(middleware.RecoveryMiddleware())
+	r.Use(middleware.ErrorMiddleware())
+	r.Use(middleware.FormatterMiddleware())
 
 	authRepo := authRepository.NewRepositoryImpl()
 	authService := authService.NewService(authRepo)
@@ -76,13 +82,19 @@ func main() {
 		{
 			protected.DELETE("/logout", authHandler.Logout)
 			protected.GET("/users", userHandler.GetUsers)
+			protected.GET("/users/:id", userHandler.GetUser)
 			protected.POST("/users", userHandler.CreateUser)
+			protected.PUT("/users/:id", userHandler.UpdateUser)
+			protected.DELETE("/users/:id", userHandler.DeleteUser)
 			protected.GET("/teams", teamHandler.GetTeams)
 			protected.POST("/teams", teamHandler.CreateTeam)
 			protected.GET("/tasks", taskHandler.GetTasks)
 			protected.POST("/tasks", taskHandler.CreateTask)
 		}
 	}
+
+	// Handle 404 for undefined routes
+	r.NoRoute(middleware.NotFoundMiddleware())
 
 	log.Println("Server starting on :8080")
 	r.Run(":8080")

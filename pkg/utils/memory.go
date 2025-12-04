@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"fmt"
 	"sync"
 )
 
@@ -84,10 +85,96 @@ func (s *MemoryStorage) GetUserByEmail(email string) *User {
 	return nil
 }
 
-func (s *MemoryStorage) GetUserByID(id int) *User {
+func (s *MemoryStorage) GetUserByID(id string) *User {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	// Convert string ID to int
+	userID := 0
+	for i := range s.users {
+		if fmt.Sprintf("%d", i) == id {
+			userID = i
+			break
+		}
+	}
+	if userID == 0 {
+		return nil
+	}
+	return s.users[userID]
+}
+
+func (s *MemoryStorage) GetUserByIDInt(id int) *User {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.users[id]
+}
+
+func (s *MemoryStorage) UpdateUser(id, username, email, hashedPassword string) *User {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	// Convert string ID to int
+	userID := 0
+	for i := range s.users {
+		if fmt.Sprintf("%d", i) == id {
+			userID = i
+			break
+		}
+	}
+	if userID == 0 {
+		return nil
+	}
+
+	user := s.users[userID]
+	if user == nil {
+		return nil
+	}
+
+	// Update only provided fields
+	if username != "" {
+		user.Username = username
+	}
+	if email != "" {
+		// Remove old email mapping
+		delete(s.userEmails, user.Email)
+		// Add new email mapping
+		user.Email = email
+		s.userEmails[email] = userID
+	}
+	if hashedPassword != "" {
+		user.Password = hashedPassword
+	}
+
+	return user
+}
+
+func (s *MemoryStorage) DeleteUser(id string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	// Convert string ID to int
+	userID := 0
+	for i := range s.users {
+		if fmt.Sprintf("%d", i) == id {
+			userID = i
+			break
+		}
+	}
+	if userID == 0 {
+		return fmt.Errorf("user not found")
+	}
+
+	user := s.users[userID]
+	if user == nil {
+		return fmt.Errorf("user not found")
+	}
+
+	// Remove email mapping
+	delete(s.userEmails, user.Email)
+	// Remove user
+	delete(s.users, userID)
+
+	return nil
 }
 
 func (s *MemoryStorage) GetAllUsers() []*User {

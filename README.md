@@ -190,6 +190,24 @@ GET /users
 ]
 ```
 
+#### Kullanıcı Detayı
+```http
+GET /users/:id
+```
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "message": "User retrieved successfully",
+  "data": {
+    "id": 1,
+    "username": "johndoe",
+    "email": "john@example.com"
+  }
+}
+```
+
 #### Kullanıcı Oluştur
 ```http
 POST /users
@@ -207,9 +225,53 @@ POST /users
 **Response (201 Created):**
 ```json
 {
-  "id": 3,
-  "username": "newuser",
-  "email": "newuser@example.com"
+  "success": true,
+  "message": "User created successfully",
+  "data": {
+    "id": 3,
+    "username": "newuser",
+    "email": "newuser@example.com"
+  }
+}
+```
+
+#### Kullanıcı Güncelle
+```http
+PUT /users/:id
+```
+
+**Request Body:**
+```json
+{
+  "username": "updateduser",
+  "email": "updated@example.com",
+  "password": "newpassword123"
+}
+```
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "message": "User updated successfully",
+  "data": {
+    "id": 1,
+    "username": "updateduser",
+    "email": "updated@example.com"
+  }
+}
+```
+
+#### Kullanıcı Sil
+```http
+DELETE /users/:id
+```
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "message": "User deleted successfully"
 }
 ```
 

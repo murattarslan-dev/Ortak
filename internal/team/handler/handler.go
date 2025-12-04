@@ -1,9 +1,9 @@
 package handler
 
 import (
-	"net/http"
 	"ortak/internal/team"
 	"ortak/internal/team/service"
+	"ortak/pkg/response"
 
 	"github.com/gin-gonic/gin"
 )
@@ -21,25 +21,25 @@ func NewHandler(service *service.Service) *Handler {
 func (h *Handler) GetTeams(c *gin.Context) {
 	teams, err := h.service.GetTeams()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		response.SetError(c, 500, "Failed to get teams")
 		return
 	}
-	c.JSON(http.StatusOK, teams)
+	response.SetSuccess(c, "Teams retrieved successfully", teams)
 }
 
 func (h *Handler) CreateTeam(c *gin.Context) {
 	var req team.CreateTeamRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		response.SetError(c, 400, "Invalid request format: "+err.Error())
 		return
 	}
 
 	userID := c.GetInt("user_id")
 	team, err := h.service.CreateTeam(req, userID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		response.SetError(c, 500, "Failed to create team")
 		return
 	}
 
-	c.JSON(http.StatusCreated, team)
+	response.SetCreated(c, "Team created successfully", team)
 }

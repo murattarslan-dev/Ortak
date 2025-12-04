@@ -36,3 +36,31 @@ func (r *RepositoryImpl) Create(username, email, hashedPassword string) *user.Us
 		Email:    storageUser.Email,
 	}
 }
+
+func (r *RepositoryImpl) GetByID(id string) *user.User {
+	storageUser := r.storage.GetUserByID(id)
+	if storageUser == nil {
+		return nil
+	}
+	return &user.User{
+		ID:       storageUser.ID,
+		Username: storageUser.Username,
+		Email:    storageUser.Email,
+	}
+}
+
+func (r *RepositoryImpl) Update(id, username, email, hashedPassword string) *user.User {
+	storageUser := r.storage.UpdateUser(id, username, email, hashedPassword)
+	if storageUser == nil {
+		return nil
+	}
+	return &user.User{
+		ID:       storageUser.ID,
+		Username: storageUser.Username,
+		Email:    storageUser.Email,
+	}
+}
+
+func (r *RepositoryImpl) Delete(id string) error {
+	return r.storage.DeleteUser(id)
+}

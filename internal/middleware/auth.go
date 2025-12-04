@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"net/http"
+	"ortak/pkg/response"
 	"ortak/pkg/utils"
 	"strings"
 
@@ -12,7 +13,10 @@ func AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Authorization header required"})
+			c.JSON(http.StatusUnauthorized, response.Response{
+				Success: false,
+				Message: "Authorization header required",
+			})
 			c.Abort()
 			return
 		}
@@ -20,7 +24,10 @@ func AuthMiddleware() gin.HandlerFunc {
 		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
 		claims, err := utils.ValidateToken(tokenString)
 		if err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
+			c.JSON(http.StatusUnauthorized, response.Response{
+				Success: false,
+				Message: "Invalid token",
+			})
 			c.Abort()
 			return
 		}
@@ -28,7 +35,10 @@ func AuthMiddleware() gin.HandlerFunc {
 		storage := utils.GetMemoryStorage()
 		userID, exists := storage.IsTokenValid(tokenString)
 		if !exists || userID != claims.UserID {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Token not found or invalid"})
+			c.JSON(http.StatusUnauthorized, response.Response{
+				Success: false,
+				Message: "Token not found or invalid",
+			})
 			c.Abort()
 			return
 		}

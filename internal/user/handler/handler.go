@@ -1,9 +1,9 @@
 package handler
 
 import (
-	"net/http"
 	"ortak/internal/user"
 	"ortak/internal/user/service"
+	"ortak/pkg/response"
 
 	"github.com/gin-gonic/gin"
 )
@@ -21,24 +21,62 @@ func NewHandler(service *service.Service) *Handler {
 func (h *Handler) GetUsers(c *gin.Context) {
 	users, err := h.service.GetUsers()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		response.SetError(c, 500, "Failed to get users")
 		return
 	}
-	c.JSON(http.StatusOK, users)
+	response.SetSuccess(c, "Users retrieved successfully", users)
 }
 
 func (h *Handler) CreateUser(c *gin.Context) {
 	var req user.CreateUserRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		response.SetError(c, 400, "Invalid request format: "+err.Error())
 		return
 	}
 
 	user, err := h.service.CreateUser(req)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		response.SetError(c, 500, "Failed to create user")
 		return
 	}
 
-	c.JSON(http.StatusCreated, user)
+	response.SetCreated(c, "User created successfully", user)
+}
+
+func (h *Handler) GetUser(c *gin.Context) {
+	id := c.Param("id")
+	user, err := h.service.GetUserByID(id)
+	if err != nil {
+		response.SetError(c, 404, "User not found")
+		return
+	}
+	response.SetSuccess(c, "User retrieved successfully", user)
+}
+
+func (h *Handler) UpdateUser(c *gin.Context) {
+	id := c.Param("id")
+	var req user.UpdateUserRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.SetError(c, 400, "Invalid request format: "+err.Error())
+		return
+	}
+
+	user, err := h.service.UpdateUser(id, req)
+	if err != nil {
+		response.SetError(c, 500, "Failed to update user")
+		return
+	}
+
+	response.SetSuccess(c, "User updated successfully", user)
+}
+
+func (h *Handler) DeleteUser(c *gin.Context) {
+	id := c.Param("id")
+	err := h.service.DeleteUser(id)
+	if err != nil {
+		response.SetError(c, 500, "Failed to delete user")
+		return
+	}
+
+	response.SetSuccess(c, "User deleted successfully", nil)
 }
