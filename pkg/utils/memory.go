@@ -28,16 +28,25 @@ type Task struct {
 	TeamID      int    `json:"team_id"`
 }
 
+type TeamMember struct {
+	ID     int    `json:"id"`
+	UserID int    `json:"user_id"`
+	TeamID int    `json:"team_id"`
+	Role   string `json:"role"`
+}
+
 type MemoryStorage struct {
-	users      map[int]*User
-	teams      map[int]*Team
-	tasks      map[int]*Task
-	tokens     map[string]int
-	userEmails map[string]int
-	nextUserID int
-	nextTeamID int
-	nextTaskID int
-	mu         sync.RWMutex
+	users       map[int]*User
+	teams       map[int]*Team
+	tasks       map[int]*Task
+	members     map[int]*TeamMember
+	tokens      map[string]int
+	userEmails  map[string]int
+	nextUserID  int
+	nextTeamID  int
+	nextTaskID  int
+	nextMemberID int
+	mu          sync.RWMutex
 }
 
 var instance *MemoryStorage
@@ -46,14 +55,16 @@ var once sync.Once
 func GetMemoryStorage() *MemoryStorage {
 	once.Do(func() {
 		instance = &MemoryStorage{
-			users:      make(map[int]*User),
-			teams:      make(map[int]*Team),
-			tasks:      make(map[int]*Task),
-			tokens:     make(map[string]int),
-			userEmails: make(map[string]int),
-			nextUserID: 1,
-			nextTeamID: 1,
-			nextTaskID: 1,
+			users:        make(map[int]*User),
+			teams:        make(map[int]*Team),
+			tasks:        make(map[int]*Task),
+			members:      make(map[int]*TeamMember),
+			tokens:       make(map[string]int),
+			userEmails:   make(map[string]int),
+			nextUserID:   1,
+			nextTeamID:   1,
+			nextTaskID:   1,
+			nextMemberID: 1,
 		}
 	})
 	return instance
@@ -418,5 +429,80 @@ func (s *MemoryStorage) DeleteTask(id string) error {
 	// Remove task
 	delete(s.tasks, taskID)
 
+	return nil
+}
+
+// Team Membership Methods
+func (s *MemoryStorage) AddTeamMember(userID, teamID int, role string) *TeamMember {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	// Check if membership already exists
+	for _, member := range s.members {
+		if member.UserID == userID && member.TeamID == teamID {
+			return member // Already a member
+		}
+	}
+
+	member := &TeamMember{
+		ID:     s.nextMemberID,
+		UserID: userID,
+		TeamID: teamID,
+		Role:   role,
+	}
+	s.members[s.nextMemberID] = member
+	s.nextMemberID++
+	return member
+}
+
+func (s *MemoryStorage) RemoveTeamMember(userID, teamID int) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	for id, member := range s.members {
+		if member.UserID == userID && member.TeamID == teamID {
+			delete(s.members, id)
+			return nil
+		}
+	}
+	return fmt.Errorf("membership not found")
+}
+
+func (s *MemoryStorage) GetTeamMembers(teamID int) []*TeamMember {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	members := make([]*TeamMember, 0)
+	for _, member := range s.members {
+		if member.TeamID == teamID {
+			members = append(members, member)
+		}
+	}
+	return members
+}
+
+func (s *MemoryStorage) GetUserTeams(userID int) []*TeamMember {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	members := make([]*TeamMember, 0)
+	for _, member := range s.members {
+		if member.UserID == userID {
+			members = append(members, member)
+		}
+	}
+	return members
+}
+
+func (s *MemoryStorage) UpdateMemberRole(userID, teamID int, role string) *TeamMember {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	for _, member := range s.members {
+		if member.UserID == userID && member.TeamID == teamID {
+			member.Role = role
+			return member
+		}
+	}
 	return nil
 }

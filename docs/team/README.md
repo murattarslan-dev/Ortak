@@ -62,7 +62,21 @@ Belirli bir takımın detaylarını getirir.
     "id": 1,
     "name": "Development Team",
     "description": "Backend development team",
-    "owner_id": 1
+    "owner_id": 1,
+    "members": [
+      {
+        "id": 1,
+        "user_id": 2,
+        "team_id": 1,
+        "role": "developer"
+      },
+      {
+        "id": 2,
+        "user_id": 3,
+        "team_id": 1,
+        "role": "admin"
+      }
+    ]
   }
 }
 ```
@@ -77,7 +91,7 @@ Belirli bir takımın detaylarını getirir.
 POST /teams
 ```
 
-Yeni takım oluşturur. Oluşturan kullanıcı otomatik olarak owner olur.
+Yeni takım oluşturur. Oluşturan kullanıcı otomatik olarak owner olur ve takıma "owner" rolü ile üye olarak eklenir.
 
 **Request Body:**
 ```json
@@ -100,6 +114,8 @@ Yeni takım oluşturur. Oluşturan kullanıcı otomatik olarak owner olur.
   }
 }
 ```
+
+> **Not:** Takım oluşturulduktan sonra, oluşturan kullanıcı otomatik olarak "owner" rolü ile takıma üye olarak eklenir.
 
 ---
 
@@ -216,11 +232,153 @@ curl -X DELETE http://localhost:8080/api/v1/teams/1 \
   -H "Authorization: Bearer YOUR_TOKEN_HERE"
 ```
 
+## Takım Üyeleri Yönetimi
+
+### Takıma Üye Ekleme
+```http
+POST /teams/:id/members
+```
+
+Takıma yeni üye ekler. Sadece takım sahibi ekleyebilir.
+
+**Parameters:**
+- `id` (path): Takım ID'si
+
+**Request Body:**
+```json
+{
+  "user_id": 2,
+  "role": "developer"
+}
+```
+
+**Response (201 Created):**
+```json
+{
+  "success": true,
+  "message": "Team member added successfully",
+  "data": {
+    "id": 1,
+    "user_id": 2,
+    "team_id": 1,
+    "role": "developer"
+  }
+}
+```
+
+**Hata Durumları:**
+- `403 Forbidden` - Sadece takım sahibi üye ekleyebilir
+- `404 Not Found` - Takım bulunamadı
+
+---
+
+### Takımdan Üye Çıkarma
+```http
+DELETE /teams/:id/members/:userId
+```
+
+Takımdan üye çıkarır. Sadece takım sahibi çıkarabilir.
+
+**Parameters:**
+- `id` (path): Takım ID'si
+- `userId` (path): Çıkarılacak kullanıcı ID'si
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "message": "Team member removed successfully"
+}
+```
+
+**Hata Durumları:**
+- `403 Forbidden` - Sadece takım sahibi üye çıkarabilir
+- `404 Not Found` - Takım veya üye bulunamadı
+
+---
+
+### Üye Rolü Güncelleme
+```http
+PUT /teams/:id/members/:userId/role
+```
+
+Takım üyesinin rolünü günceller. Sadece takım sahibi güncelleyebilir.
+
+**Parameters:**
+- `id` (path): Takım ID'si
+- `userId` (path): Güncellenecek kullanıcı ID'si
+
+**Request Body:**
+```json
+{
+  "role": "admin"
+}
+```
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "message": "Member role updated successfully",
+  "data": {
+    "id": 1,
+    "user_id": 2,
+    "team_id": 1,
+    "role": "admin"
+  }
+}
+```
+
+**Hata Durumları:**
+- `403 Forbidden` - Sadece takım sahibi rol güncelleyebilir
+- `404 Not Found` - Takım veya üye bulunamadı
+
+## Üye Rolleri
+
+| Rol | Açıklama |
+|-----|----------|
+| `owner` | Takım sahibi - Tüm yetkiler |
+| `admin` | Yönetici - Üye yönetimi hariç tüm yetkiler |
+| `developer` | Geliştirici - Görev oluşturma ve düzenleme |
+| `designer` | Tasarımcı - Tasarım görevleri |
+| `viewer` | Görüntüleyici - Sadece okuma yetkisi |
+
+## Örnek Kullanım
+
+### cURL Örnekleri
+
+**Takıma üye ekleme:**
+```bash
+curl -X POST http://localhost:8080/api/v1/teams/1/members \
+  -H "Authorization: Bearer YOUR_TOKEN_HERE" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "user_id": 2,
+    "role": "developer"
+  }'
+```
+
+**Üye rolü güncelleme:**
+```bash
+curl -X PUT http://localhost:8080/api/v1/teams/1/members/2/role \
+  -H "Authorization: Bearer YOUR_TOKEN_HERE" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "role": "admin"
+  }'
+```
+
+**Üye çıkarma:**
+```bash
+curl -X DELETE http://localhost:8080/api/v1/teams/1/members/2 \
+  -H "Authorization: Bearer YOUR_TOKEN_HERE"
+```
+
 ## İleri Seviye Özellikler
 
 > **Not:** Bu özellikler gelecek versiyonlarda eklenecektir.
 
-- **Takım Üyeleri Yönetimi** - Üye ekleme/çıkarma
-- **Rol Yönetimi** - Admin, Member, Viewer rolleri
 - **Takım İstatistikleri** - Görev tamamlama oranları
 - **Takım Avatarı** - Profil resmi upload
+- **Rol Bazlı Yetkiler** - Detaylı yetki sistemi
+- **Üye Davetleri** - Email ile üye davet sistemi

@@ -17,3 +17,15 @@ type UpdateUserRequest struct {
 	Email    string `json:"email,omitempty" binding:"omitempty,email"`
 	Password string `json:"password,omitempty" binding:"omitempty,min=6"`
 }
+
+type UserTeam struct {
+	TeamID int    `json:"team_id"`
+	Role   string `json:"role"`
+}
+
+type UserWithTeams struct {
+	ID       int        `json:"id"`
+	Username string     `json:"username"`
+	Email    string     `json:"email"`
+	Teams    []UserTeam `json:"teams"`
+}
