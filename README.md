@@ -1,477 +1,202 @@
 # Ortak - Takım ve Görev Yönetim API'si
 
-Eğitim amaçlı geliştirilmiş bir backend projesi. Go dilinde yazılmış RESTful API ile takım ve görev yönetim-takip uygulaması.
+Modern, ölçeklenebilir takım ve görev yönetim sistemi. Go dilinde yazılmış RESTful API ile mikroservis mimarisine uygun modüler yapı.
 
-## Özellikler
+## 🚀 Özellikler
 
-- JWT tabanlı kimlik doğrulama
-- Kullanıcı yönetimi (CRUD)
-- Takım yönetimi (CRUD)
-- Görev yönetimi (CRUD)
-- PostgreSQL veritabanı desteği
-- Docker containerization
-- Environment variables ile yapılandırma
+- **JWT Tabanlı Kimlik Doğrulama** - Güvenli token-based authentication
+- **Modüler Mimari** - Mikroservis geçişine hazır clean architecture
+- **Standart Response Format** - Tutarlı API response yapısı
+- **Comprehensive Middleware** - Logging, error handling, recovery
+- **Unit Testing** - Mock repository pattern ile test edilebilir kod
+- **Memory Storage** - Development için in-memory database
 
-## Teknolojiler
+## 🛠 Teknolojiler
 
-- **Go 1.21**
-- **Gin Web Framework** - HTTP router ve middleware
-- **PostgreSQL** - Veritabanı
-- **JWT** - Kimlik doğrulama
-- **bcrypt** - Şifre hashleme
-- **Docker** - Containerization
+| Kategori | Teknoloji | Açıklama |
+|----------|-----------|----------|
+| **Backend** | Go 1.21+ | Ana programlama dili |
+| **Web Framework** | Gin | HTTP router ve middleware |
+| **Authentication** | JWT | Token-based kimlik doğrulama |
+| **Security** | bcrypt | Şifre hashleme |
+| **Testing** | Go Testing | Unit test framework |
+| **Architecture** | Clean Architecture | Modüler ve test edilebilir yapı |
 
-## Kurulum
+## 📁 Proje Yapısı
+
+```
+Ortak/
+├── cmd/api/                    # Uygulama giriş noktası
+│   └── main.go
+├── internal/                   # İç modüller
+│   ├── auth/                   # Kimlik doğrulama modülü
+│   │   ├── handler/           # HTTP handlers
+│   │   ├── service/           # Business logic
+│   │   ├── repository/        # Data access layer
+│   │   └── model.go           # Data models
+│   ├── user/                   # Kullanıcı yönetimi modülü
+│   ├── team/                   # Takım yönetimi modülü
+│   ├── task/                   # Görev yönetimi modülü
+│   ├── middleware/             # HTTP middleware'ler
+│   │   ├── auth.go            # JWT middleware
+│   │   ├── logger.go          # Request/response logging
+│   │   ├── error.go           # Error handling
+│   │   └── formatter.go       # Response formatting
+│   └── db/                     # Database bağlantısı
+├── pkg/                        # Paylaşılan paketler
+│   ├── utils/                 # Yardımcı fonksiyonlar
+│   └── response/              # Standart response yapısı
+├── docs/                       # API dokümantasyonu
+│   ├── auth/                  # Auth API docs
+│   ├── user/                  # User API docs
+│   ├── team/                  # Team API docs
+│   └── task/                  # Task API docs
+└── README.md                   # Bu dosya
+```
+
+## 🏗 Mimari
+
+### Clean Architecture Katmanları
+
+1. **Handler Layer** - HTTP request/response handling
+2. **Service Layer** - Business logic ve validation
+3. **Repository Layer** - Data access abstraction
+4. **Model Layer** - Data structures
+
+### Dependency Injection
+
+```go
+// Repository Interface
+type Repository interface {
+    GetAll() []User
+    GetByID(id string) *User
+    Create(user User) *User
+}
+
+// Service uses Repository
+type Service struct {
+    repo Repository
+}
+
+// Handler uses Service
+type Handler struct {
+    service *Service
+}
+```
+
+## 🚦 Hızlı Başlangıç
 
 ### Gereksinimler
 - Go 1.21+
-- PostgreSQL
 - Git
 
-### Adımlar
+### Kurulum
 
-1. Projeyi klonlayın:
+1. **Projeyi klonlayın:**
 ```bash
 git clone <repository-url>
 cd Ortak
 ```
 
-2. Bağımlılıkları yükleyin:
+2. **Bağımlılıkları yükleyin:**
 ```bash
 go mod tidy
 ```
 
-3. Environment dosyasını oluşturun:
-```bash
-cp .env.example .env
-```
-
-4. `.env` dosyasını düzenleyin:
-```env
-DB_HOST=localhost
-DB_PORT=5432
-DB_USER=postgres
-DB_PASSWORD=your_password
-DB_NAME=ortak
-JWT_SECRET=your-secret-key
-```
-
-5. PostgreSQL veritabanını oluşturun:
-```sql
-CREATE DATABASE ortak;
-```
-
-6. Uygulamayı çalıştırın:
+3. **Uygulamayı çalıştırın:**
 ```bash
 go run cmd/api/main.go
 ```
 
-Uygulama `http://localhost:8080` adresinde çalışacaktır.
-
-## Docker ile Çalıştırma
-
+4. **API'yi test edin:**
 ```bash
-docker build -t ortak .
-docker run -p 8080:8080 --env-file .env ortak
+curl http://localhost:8080/api/v1/health
 ```
 
-## API Endpoints
+## 📚 API Dokümantasyonu
+
+Her modül için detaylı API dokümantasyonu:
+
+- **[Authentication API](docs/auth/README.md)** - Kayıt, giriş, çıkış
+- **[User Management API](docs/user/README.md)** - Kullanıcı CRUD işlemleri
+- **[Team Management API](docs/team/README.md)** - Takım CRUD işlemleri
+- **[Task Management API](docs/task/README.md)** - Görev CRUD işlemleri
 
 ### Base URL
 ```
 http://localhost:8080/api/v1
 ```
 
-### Kimlik Doğrulama
+### Standart Response Format
 
-#### Kayıt Ol
-```http
-POST /register
-```
-
-**Request Body:**
-```json
-{
-  "username": "johndoe",
-  "email": "john@example.com",
-  "password": "password123"
-}
-```
-
-**Response (201 Created):**
-```json
-{
-  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "user": {
-    "id": 1,
-    "username": "johndoe",
-    "email": "john@example.com"
-  }
-}
-```
-
-**Hata Durumları:**
-- `400 Bad Request` - Geçersiz veri formatı
-- `500 Internal Server Error` - Sunucu hatası
-
-#### Giriş Yap
-```http
-POST /login
-```
-
-**Request Body:**
-```json
-{
-  "email": "john@example.com",
-  "password": "password123"
-}
-```
-
-**Response (200 OK):**
-```json
-{
-  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "user": {
-    "id": 1,
-    "username": "johndoe",
-    "email": "john@example.com"
-  }
-}
-```
-
-**Hata Durumları:**
-- `400 Bad Request` - Geçersiz veri formatı
-- `401 Unauthorized` - Hatalı kimlik bilgileri
-
-#### Çıkış Yap
-```http
-DELETE /logout
-```
-
-**Headers:**
-```
-Authorization: Bearer <token>
-```
-
-**Response (200 OK):**
-```json
-{
-  "message": "Logged out successfully"
-}
-```
-
-**Hata Durumları:**
-- `400 Bad Request` - Authorization header gerekli
-- `500 Internal Server Error` - Sunucu hatası
-
-### Kullanıcı Yönetimi
-
-> **Not:** Tüm kullanıcı endpoints'leri JWT token gerektirir.
-> Header: `Authorization: Bearer <token>`
-
-#### Kullanıcıları Listele
-```http
-GET /users
-```
-
-**Response (200 OK):**
-```json
-[
-  {
-    "id": 1,
-    "username": "johndoe",
-    "email": "john@example.com"
-  },
-  {
-    "id": 2,
-    "username": "janedoe",
-    "email": "jane@example.com"
-  }
-]
-```
-
-#### Kullanıcı Detayı
-```http
-GET /users/:id
-```
-
-**Response (200 OK):**
+**Başarılı Response:**
 ```json
 {
   "success": true,
-  "message": "User retrieved successfully",
-  "data": {
-    "id": 1,
-    "username": "johndoe",
-    "email": "john@example.com"
-  }
+  "message": "Operation completed successfully",
+  "data": { ... }
 }
 ```
 
-#### Kullanıcı Oluştur
-```http
-POST /users
-```
-
-**Request Body:**
+**Hata Response:**
 ```json
 {
-  "username": "newuser",
-  "email": "newuser@example.com",
-  "password": "password123"
+  "success": false,
+  "message": "Error description"
 }
 ```
 
-**Response (201 Created):**
-```json
-{
-  "success": true,
-  "message": "User created successfully",
-  "data": {
-    "id": 3,
-    "username": "newuser",
-    "email": "newuser@example.com"
-  }
-}
-```
+## 🧪 Testing
 
-#### Kullanıcı Güncelle
-```http
-PUT /users/:id
-```
+### Unit Testleri Çalıştırma
 
-**Request Body:**
-```json
-{
-  "username": "updateduser",
-  "email": "updated@example.com",
-  "password": "newpassword123"
-}
-```
-
-**Response (200 OK):**
-```json
-{
-  "success": true,
-  "message": "User updated successfully",
-  "data": {
-    "id": 1,
-    "username": "updateduser",
-    "email": "updated@example.com"
-  }
-}
-```
-
-#### Kullanıcı Sil
-```http
-DELETE /users/:id
-```
-
-**Response (200 OK):**
-```json
-{
-  "success": true,
-  "message": "User deleted successfully"
-}
-```
-
-### Takım Yönetimi
-
-> **Not:** Tüm takım endpoints'leri JWT token gerektirir.
-
-#### Takımları Listele
-```http
-GET /teams
-```
-
-**Response (200 OK):**
-```json
-[
-  {
-    "id": 1,
-    "name": "Development Team",
-    "description": "Backend development",
-    "owner_id": 1
-  },
-  {
-    "id": 2,
-    "name": "Design Team",
-    "description": "UI/UX design",
-    "owner_id": 2
-  }
-]
-```
-
-#### Takım Oluştur
-```http
-POST /teams
-```
-
-**Request Body:**
-```json
-{
-  "name": "QA Team",
-  "description": "Quality Assurance team"
-}
-```
-
-**Response (201 Created):**
-```json
-{
-  "id": 3,
-  "name": "QA Team",
-  "description": "Quality Assurance team",
-  "owner_id": 1
-}
-```
-
-### Görev Yönetimi
-
-> **Not:** Tüm görev endpoints'leri JWT token gerektirir.
-
-#### Görevleri Listele
-```http
-GET /tasks
-```
-
-**Response (200 OK):**
-```json
-[
-  {
-    "id": 1,
-    "title": "Setup API",
-    "description": "Create REST API",
-    "status": "in_progress",
-    "assignee_id": 1,
-    "team_id": 1
-  },
-  {
-    "id": 2,
-    "title": "Design UI",
-    "description": "Create user interface",
-    "status": "todo",
-    "assignee_id": 2,
-    "team_id": 2
-  }
-]
-```
-
-#### Görev Oluştur
-```http
-POST /tasks
-```
-
-**Request Body:**
-```json
-{
-  "title": "Write Tests",
-  "description": "Write unit tests for API",
-  "assignee_id": 1,
-  "team_id": 1
-}
-```
-
-**Response (201 Created):**
-```json
-{
-  "id": 3,
-  "title": "Write Tests",
-  "description": "Write unit tests for API",
-  "status": "todo",
-  "assignee_id": 1,
-  "team_id": 1
-}
-```
-
-## Hata Kodları
-
-| Kod | Açıklama |
-|-----|----------|
-| 200 | Başarılı |
-| 201 | Oluşturuldu |
-| 400 | Hatalı İstek |
-| 401 | Yetkisiz Erişim |
-| 500 | Sunucu Hatası |
-
-## Görev Durumları
-
-- `todo` - Yapılacak
-- `in_progress` - Devam Ediyor
-- `done` - Tamamlandı
-
-## Proje Yapısı
-
-```
-/Ortak
-  /cmd/api
-    main.go                # Uygulama giriş noktası
-  /internal
-    /auth                  # Kimlik doğrulama
-      handler.go
-      service.go
-      model.go
-    /user                  # Kullanıcı CRUD
-      handler.go
-      service.go
-      model.go
-    /team                  # Takım CRUD
-      handler.go
-      service.go
-      model.go
-    /task                  # Görev CRUD
-      handler.go
-      service.go
-      model.go
-    /db                    # Veritabanı bağlantısı
-      db.go
-    /middleware            # Middleware'ler
-      auth.go
-  /pkg
-    /utils                 # Yardımcı fonksiyonlar
-      jwt.go
-      hash.go
-  go.mod
-  go.sum
-  Dockerfile
-  .env
-  .env.example
-  README.md
-```
-
-## Geliştirme
-
-### Yeni Özellik Ekleme
-
-1. `internal/` klasörü altında yeni modül oluşturun
-2. Handler, Service ve Model dosyalarını ekleyin
-3. `main.go` dosyasında route'ları tanımlayın
-
-### Test Etme
-
-API'yi test etmek için Postman, curl veya benzeri araçları kullanabilirsiniz.
-
-**Örnek curl komutu:**
 ```bash
-# Kayıt ol
-curl -X POST http://localhost:8080/api/v1/register \
-  -H "Content-Type: application/json" \
-  -d '{"username":"test","email":"test@example.com","password":"password123"}'
+# Tüm testler
+go test ./...
 
-# Giriş yap
-curl -X POST http://localhost:8080/api/v1/login \
-  -H "Content-Type: application/json" \
-  -d '{"email":"test@example.com","password":"password123"}'
+# Belirli modül
+go test ./internal/user/handler -v
 
-# Çıkış yap (token gerekli)
-curl -X DELETE http://localhost:8080/api/v1/logout \
-  -H "Authorization: Bearer <your-token>"
-
-# Takımları listele (token gerekli)
-curl -X GET http://localhost:8080/api/v1/teams \
-  -H "Authorization: Bearer <your-token>"
+# Coverage raporu
+go test -cover ./...
 ```
 
-## Katkıda Bulunma
+### Test Yapısı
+
+- **Mock Repository Pattern** - Test için sahte data layer
+- **HTTP Test** - Gin test context ile endpoint testleri
+- **Service Tests** - Business logic unit testleri
+
+## 🔧 Geliştirme
+
+### Yeni Modül Ekleme
+
+1. `internal/` altında yeni klasör oluşturun
+2. Handler, Service, Repository katmanlarını ekleyin
+3. Model'leri tanımlayın
+4. Unit testleri yazın
+5. `main.go`'da route'ları ekleyin
+
+### Middleware Ekleme
+
+1. `internal/middleware/` altında yeni dosya oluşturun
+2. Gin middleware pattern'ini kullanın
+3. `main.go`'da middleware'i kaydedin
+
+## 🚀 Deployment
+
+### Development
+```bash
+go run cmd/api/main.go
+```
+
+### Production Build
+```bash
+go build -o ortak cmd/api/main.go
+./ortak
+```
+
+## 🤝 Katkıda Bulunma
 
 1. Fork edin
 2. Feature branch oluşturun (`git checkout -b feature/amazing-feature`)
@@ -479,6 +204,12 @@ curl -X GET http://localhost:8080/api/v1/teams \
 4. Push edin (`git push origin feature/amazing-feature`)
 5. Pull Request oluşturun
 
-## Lisans
+## 📄 Lisans
 
 Bu proje eğitim amaçlı geliştirilmiştir.
+
+---
+
+**Geliştirici:** Murat Arslan  
+**Versiyon:** 1.0.0  
+**Son Güncelleme:** Aralık 2024
