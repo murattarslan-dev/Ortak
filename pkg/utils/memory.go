@@ -337,3 +337,86 @@ func (s *MemoryStorage) GetAllTasks() []*Task {
 	}
 	return tasks
 }
+
+func (s *MemoryStorage) GetTaskByID(id string) *Task {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	// Convert string ID to int
+	taskID := 0
+	for i := range s.tasks {
+		if fmt.Sprintf("%d", i) == id {
+			taskID = i
+			break
+		}
+	}
+	if taskID == 0 {
+		return nil
+	}
+	return s.tasks[taskID]
+}
+
+func (s *MemoryStorage) UpdateTask(id, title, description, status string, assigneeID int) *Task {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	// Convert string ID to int
+	taskID := 0
+	for i := range s.tasks {
+		if fmt.Sprintf("%d", i) == id {
+			taskID = i
+			break
+		}
+	}
+	if taskID == 0 {
+		return nil
+	}
+
+	task := s.tasks[taskID]
+	if task == nil {
+		return nil
+	}
+
+	// Update only provided fields
+	if title != "" {
+		task.Title = title
+	}
+	if description != "" {
+		task.Description = description
+	}
+	if status != "" {
+		task.Status = status
+	}
+	if assigneeID != 0 {
+		task.AssigneeID = assigneeID
+	}
+
+	return task
+}
+
+func (s *MemoryStorage) DeleteTask(id string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	// Convert string ID to int
+	taskID := 0
+	for i := range s.tasks {
+		if fmt.Sprintf("%d", i) == id {
+			taskID = i
+			break
+		}
+	}
+	if taskID == 0 {
+		return fmt.Errorf("task not found")
+	}
+
+	task := s.tasks[taskID]
+	if task == nil {
+		return fmt.Errorf("task not found")
+	}
+
+	// Remove task
+	delete(s.tasks, taskID)
+
+	return nil
+}

@@ -42,3 +42,41 @@ func (h *Handler) CreateTask(c *gin.Context) {
 
 	response.SetCreated(c, "Task created successfully", task)
 }
+
+func (h *Handler) GetTask(c *gin.Context) {
+	id := c.Param("id")
+	task, err := h.service.GetTaskByID(id)
+	if err != nil {
+		response.SetError(c, 404, "Task not found")
+		return
+	}
+	response.SetSuccess(c, "Task retrieved successfully", task)
+}
+
+func (h *Handler) UpdateTask(c *gin.Context) {
+	id := c.Param("id")
+	var req task.UpdateTaskRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.SetError(c, 400, "Invalid request format: "+err.Error())
+		return
+	}
+
+	task, err := h.service.UpdateTask(id, req)
+	if err != nil {
+		response.SetError(c, 500, "Failed to update task")
+		return
+	}
+
+	response.SetSuccess(c, "Task updated successfully", task)
+}
+
+func (h *Handler) DeleteTask(c *gin.Context) {
+	id := c.Param("id")
+	err := h.service.DeleteTask(id)
+	if err != nil {
+		response.SetError(c, 500, "Failed to delete task")
+		return
+	}
+
+	response.SetSuccess(c, "Task deleted successfully", nil)
+}

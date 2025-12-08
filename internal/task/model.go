@@ -15,3 +15,10 @@ type CreateTaskRequest struct {
 	AssigneeID  int    `json:"assignee_id"`
 	TeamID      int    `json:"team_id" binding:"required"`
 }
+
+type UpdateTaskRequest struct {
+	Title       string `json:"title,omitempty"`
+	Description string `json:"description,omitempty"`
+	Status      string `json:"status,omitempty"`
+	AssigneeID  int    `json:"assignee_id,omitempty"`
+}

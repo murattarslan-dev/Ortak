@@ -1,6 +1,9 @@
 package repository
 
-import "ortak/internal/task"
+import (
+	"fmt"
+	"ortak/internal/task"
+)
 
 type MockRepository struct {
 	tasks []task.Task
@@ -27,4 +30,44 @@ func (m *MockRepository) Create(title, description string, assigneeID, teamID in
 	}
 	m.tasks = append(m.tasks, *task)
 	return task
+}
+
+func (m *MockRepository) GetByID(id string) *task.Task {
+	for _, t := range m.tasks {
+		if fmt.Sprintf("%d", t.ID) == id {
+			return &t
+		}
+	}
+	return nil
+}
+
+func (m *MockRepository) Update(id, title, description, status string, assigneeID int) *task.Task {
+	for i, t := range m.tasks {
+		if fmt.Sprintf("%d", t.ID) == id {
+			if title != "" {
+				m.tasks[i].Title = title
+			}
+			if description != "" {
+				m.tasks[i].Description = description
+			}
+			if status != "" {
+				m.tasks[i].Status = status
+			}
+			if assigneeID != 0 {
+				m.tasks[i].AssigneeID = assigneeID
+			}
+			return &m.tasks[i]
+		}
+	}
+	return nil
+}
+
+func (m *MockRepository) Delete(id string) error {
+	for i, t := range m.tasks {
+		if fmt.Sprintf("%d", t.ID) == id {
+			m.tasks = append(m.tasks[:i], m.tasks[i+1:]...)
+			return nil
+		}
+	}
+	return fmt.Errorf("task not found")
 }

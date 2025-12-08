@@ -42,3 +42,37 @@ func (r *RepositoryImpl) Create(title, description string, assigneeID, teamID in
 		TeamID:      storageTask.TeamID,
 	}
 }
+
+func (r *RepositoryImpl) GetByID(id string) *task.Task {
+	storageTask := r.storage.GetTaskByID(id)
+	if storageTask == nil {
+		return nil
+	}
+	return &task.Task{
+		ID:          storageTask.ID,
+		Title:       storageTask.Title,
+		Description: storageTask.Description,
+		Status:      storageTask.Status,
+		AssigneeID:  storageTask.AssigneeID,
+		TeamID:      storageTask.TeamID,
+	}
+}
+
+func (r *RepositoryImpl) Update(id, title, description, status string, assigneeID int) *task.Task {
+	storageTask := r.storage.UpdateTask(id, title, description, status, assigneeID)
+	if storageTask == nil {
+		return nil
+	}
+	return &task.Task{
+		ID:          storageTask.ID,
+		Title:       storageTask.Title,
+		Description: storageTask.Description,
+		Status:      storageTask.Status,
+		AssigneeID:  storageTask.AssigneeID,
+		TeamID:      storageTask.TeamID,
+	}
+}
+
+func (r *RepositoryImpl) Delete(id string) error {
+	return r.storage.DeleteTask(id)
+}
