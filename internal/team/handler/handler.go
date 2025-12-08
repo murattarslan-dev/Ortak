@@ -65,7 +65,13 @@ func (h *Handler) UpdateTeam(c *gin.Context) {
 	userID := c.GetInt("user_id")
 	team, err := h.service.UpdateTeam(id, req, userID)
 	if err != nil {
-		response.SetError(c, 500, "Failed to update team")
+		if err.Error() == "team not found" {
+			response.SetError(c, 404, "Team not found")
+		} else if err.Error() == "only team owner can update team" {
+			response.SetError(c, 403, "Only team owner can update team")
+		} else {
+			response.SetError(c, 500, "Failed to update team")
+		}
 		return
 	}
 
@@ -77,7 +83,13 @@ func (h *Handler) DeleteTeam(c *gin.Context) {
 	userID := c.GetInt("user_id")
 	err := h.service.DeleteTeam(id, userID)
 	if err != nil {
-		response.SetError(c, 500, "Failed to delete team")
+		if err.Error() == "team not found" {
+			response.SetError(c, 404, "Team not found")
+		} else if err.Error() == "only team owner can delete team" {
+			response.SetError(c, 403, "Only team owner can delete team")
+		} else {
+			response.SetError(c, 500, "Failed to delete team")
+		}
 		return
 	}
 
@@ -95,7 +107,13 @@ func (h *Handler) AddTeamMember(c *gin.Context) {
 	userID := c.GetInt("user_id")
 	member, err := h.service.AddTeamMember(teamID, req.UserID, req.Role, userID)
 	if err != nil {
-		response.SetError(c, 500, "Failed to add team member")
+		if err.Error() == "team not found" {
+			response.SetError(c, 404, "Team not found")
+		} else if err.Error() == "only team owner can add members" {
+			response.SetError(c, 403, "Only team owner can add members")
+		} else {
+			response.SetError(c, 500, "Failed to add team member")
+		}
 		return
 	}
 
@@ -109,7 +127,13 @@ func (h *Handler) RemoveTeamMember(c *gin.Context) {
 	
 	err := h.service.RemoveTeamMember(teamID, memberUserID, userID)
 	if err != nil {
-		response.SetError(c, 500, "Failed to remove team member")
+		if err.Error() == "team not found" {
+			response.SetError(c, 404, "Team not found")
+		} else if err.Error() == "only team owner can remove members" {
+			response.SetError(c, 403, "Only team owner can remove members")
+		} else {
+			response.SetError(c, 500, "Failed to remove team member")
+		}
 		return
 	}
 
@@ -128,7 +152,13 @@ func (h *Handler) UpdateMemberRole(c *gin.Context) {
 	userID := c.GetInt("user_id")
 	member, err := h.service.UpdateMemberRole(teamID, memberUserID, req.Role, userID)
 	if err != nil {
-		response.SetError(c, 500, "Failed to update member role")
+		if err.Error() == "team not found" {
+			response.SetError(c, 404, "Team not found")
+		} else if err.Error() == "only team owner can update member roles" {
+			response.SetError(c, 403, "Only team owner can update member roles")
+		} else {
+			response.SetError(c, 500, "Failed to update member role")
+		}
 		return
 	}
 

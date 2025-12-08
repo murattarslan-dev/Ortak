@@ -63,7 +63,13 @@ func (h *Handler) UpdateTask(c *gin.Context) {
 
 	task, err := h.service.UpdateTask(id, req)
 	if err != nil {
-		response.SetError(c, 500, "Failed to update task")
+		if err.Error() == "task not found" {
+			response.SetError(c, 404, "Task not found")
+		} else if err.Error() == "invalid status: must be todo, in_progress, or done" {
+			response.SetError(c, 400, "Invalid status: must be todo, in_progress, or done")
+		} else {
+			response.SetError(c, 500, "Failed to update task")
+		}
 		return
 	}
 
@@ -74,7 +80,11 @@ func (h *Handler) DeleteTask(c *gin.Context) {
 	id := c.Param("id")
 	err := h.service.DeleteTask(id)
 	if err != nil {
-		response.SetError(c, 500, "Failed to delete task")
+		if err.Error() == "task not found" {
+			response.SetError(c, 404, "Task not found")
+		} else {
+			response.SetError(c, 500, "Failed to delete task")
+		}
 		return
 	}
 

@@ -217,7 +217,7 @@ func TestHandler_DeleteTask_NotFound(t *testing.T) {
 	req := httptest.NewRequest("DELETE", "/tasks/999", nil)
 	router.ServeHTTP(w, req)
 
-	if w.Code != http.StatusInternalServerError {
-		t.Errorf("Expected status %d, got %d", http.StatusInternalServerError, w.Code)
+	if w.Code != http.StatusNotFound {
+		t.Errorf("Expected status %d, got %d", http.StatusNotFound, w.Code)
 	}
 }
