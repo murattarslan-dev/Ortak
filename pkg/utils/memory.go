@@ -233,6 +233,83 @@ func (s *MemoryStorage) GetAllTeams() []*Team {
 	return teams
 }
 
+func (s *MemoryStorage) GetTeamByID(id string) *Team {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	// Convert string ID to int
+	teamID := 0
+	for i := range s.teams {
+		if fmt.Sprintf("%d", i) == id {
+			teamID = i
+			break
+		}
+	}
+	if teamID == 0 {
+		return nil
+	}
+	return s.teams[teamID]
+}
+
+func (s *MemoryStorage) UpdateTeam(id, name, description string) *Team {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	// Convert string ID to int
+	teamID := 0
+	for i := range s.teams {
+		if fmt.Sprintf("%d", i) == id {
+			teamID = i
+			break
+		}
+	}
+	if teamID == 0 {
+		return nil
+	}
+
+	team := s.teams[teamID]
+	if team == nil {
+		return nil
+	}
+
+	// Update only provided fields
+	if name != "" {
+		team.Name = name
+	}
+	if description != "" {
+		team.Description = description
+	}
+
+	return team
+}
+
+func (s *MemoryStorage) DeleteTeam(id string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	// Convert string ID to int
+	teamID := 0
+	for i := range s.teams {
+		if fmt.Sprintf("%d", i) == id {
+			teamID = i
+			break
+		}
+	}
+	if teamID == 0 {
+		return fmt.Errorf("team not found")
+	}
+
+	team := s.teams[teamID]
+	if team == nil {
+		return fmt.Errorf("team not found")
+	}
+
+	// Remove team
+	delete(s.teams, teamID)
+
+	return nil
+}
+
 func (s *MemoryStorage) CreateTask(title, description string, assigneeID, teamID int) *Task {
 	s.mu.Lock()
 	defer s.mu.Unlock()

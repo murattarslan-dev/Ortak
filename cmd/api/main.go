@@ -87,7 +87,10 @@ func main() {
 			protected.PUT("/users/:id", userHandler.UpdateUser)
 			protected.DELETE("/users/:id", userHandler.DeleteUser)
 			protected.GET("/teams", teamHandler.GetTeams)
+			protected.GET("/teams/:id", teamHandler.GetTeam)
 			protected.POST("/teams", teamHandler.CreateTeam)
+			protected.PUT("/teams/:id", teamHandler.UpdateTeam)
+			protected.DELETE("/teams/:id", teamHandler.DeleteTeam)
 			protected.GET("/tasks", taskHandler.GetTasks)
 			protected.POST("/tasks", taskHandler.CreateTask)
 		}

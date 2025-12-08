@@ -43,3 +43,43 @@ func (h *Handler) CreateTeam(c *gin.Context) {
 
 	response.SetCreated(c, "Team created successfully", team)
 }
+
+func (h *Handler) GetTeam(c *gin.Context) {
+	id := c.Param("id")
+	team, err := h.service.GetTeamByID(id)
+	if err != nil {
+		response.SetError(c, 404, "Team not found")
+		return
+	}
+	response.SetSuccess(c, "Team retrieved successfully", team)
+}
+
+func (h *Handler) UpdateTeam(c *gin.Context) {
+	id := c.Param("id")
+	var req team.UpdateTeamRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.SetError(c, 400, "Invalid request format: "+err.Error())
+		return
+	}
+
+	userID := c.GetInt("user_id")
+	team, err := h.service.UpdateTeam(id, req, userID)
+	if err != nil {
+		response.SetError(c, 500, "Failed to update team")
+		return
+	}
+
+	response.SetSuccess(c, "Team updated successfully", team)
+}
+
+func (h *Handler) DeleteTeam(c *gin.Context) {
+	id := c.Param("id")
+	userID := c.GetInt("user_id")
+	err := h.service.DeleteTeam(id, userID)
+	if err != nil {
+		response.SetError(c, 500, "Failed to delete team")
+		return
+	}
+
+	response.SetSuccess(c, "Team deleted successfully", nil)
+}

@@ -38,3 +38,33 @@ func (r *RepositoryImpl) Create(name, description string, ownerID int) *team.Tea
 		OwnerID:     storageTeam.OwnerID,
 	}
 }
+
+func (r *RepositoryImpl) GetByID(id string) *team.Team {
+	storageTeam := r.storage.GetTeamByID(id)
+	if storageTeam == nil {
+		return nil
+	}
+	return &team.Team{
+		ID:          storageTeam.ID,
+		Name:        storageTeam.Name,
+		Description: storageTeam.Description,
+		OwnerID:     storageTeam.OwnerID,
+	}
+}
+
+func (r *RepositoryImpl) Update(id, name, description string) *team.Team {
+	storageTeam := r.storage.UpdateTeam(id, name, description)
+	if storageTeam == nil {
+		return nil
+	}
+	return &team.Team{
+		ID:          storageTeam.ID,
+		Name:        storageTeam.Name,
+		Description: storageTeam.Description,
+		OwnerID:     storageTeam.OwnerID,
+	}
+}
+
+func (r *RepositoryImpl) Delete(id string) error {
+	return r.storage.DeleteTeam(id)
+}
