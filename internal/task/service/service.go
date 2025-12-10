@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"ortak/internal/task"
 	"ortak/internal/task/repository"
+	"time"
 )
 
 type Service struct {
@@ -25,7 +26,7 @@ func (s *Service) CreateTask(req task.CreateTaskRequest) (*task.Task, error) {
 }
 
 func (s *Service) GetTaskByID(id string) (*task.Task, error) {
-	task := s.repo.GetByID(id)
+	task := s.repo.GetByIDWithComments(id)
 	if task == nil {
 		return nil, fmt.Errorf("task not found")
 	}
@@ -76,6 +77,25 @@ func (s *Service) UpdateTaskStatus(id string, req task.UpdateTaskStatusRequest) 
 	}
 
 	return s.repo.UpdateStatus(id, req.Status), nil
+}
+
+func (s *Service) AddComment(taskID string, userID int, req task.AddCommentRequest) (*task.TaskComment, error) {
+	existingTask := s.repo.GetByID(taskID)
+	if existingTask == nil {
+		return nil, fmt.Errorf("task not found")
+	}
+
+	// Convert taskID to int
+	taskIDInt := 0
+	for i := 1; i <= 1000; i++ {
+		if fmt.Sprintf("%d", i) == taskID {
+			taskIDInt = i
+			break
+		}
+	}
+
+	createdAt := time.Now().Format(time.RFC3339)
+	return s.repo.AddComment(taskIDInt, userID, req.Comment, createdAt), nil
 }
 
 func (s *Service) DeleteTask(id string) error {

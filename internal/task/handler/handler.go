@@ -99,6 +99,33 @@ func (h *Handler) UpdateTaskStatus(c *gin.Context) {
 	response.SetSuccess(c, "Task status updated successfully", task)
 }
 
+func (h *Handler) AddComment(c *gin.Context) {
+	taskID := c.Param("id")
+	userID, exists := c.Get("user_id")
+	if !exists {
+		response.SetError(c, 401, "User not authenticated")
+		return
+	}
+
+	var req task.AddCommentRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.SetError(c, 400, "Invalid request format: "+err.Error())
+		return
+	}
+
+	comment, err := h.service.AddComment(taskID, userID.(int), req)
+	if err != nil {
+		if err.Error() == "task not found" {
+			response.SetError(c, 404, "Task not found")
+		} else {
+			response.SetError(c, 500, "Failed to add comment")
+		}
+		return
+	}
+
+	response.SetCreated(c, "Comment added successfully", comment)
+}
+
 func (h *Handler) DeleteTask(c *gin.Context) {
 	id := c.Param("id")
 	err := h.service.DeleteTask(id)

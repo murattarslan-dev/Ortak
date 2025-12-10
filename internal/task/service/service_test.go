@@ -100,3 +100,42 @@ func TestService_UpdateTaskStatus(t *testing.T) {
 		t.Error("Expected error for non-existent task, got nil")
 	}
 }
+
+func TestService_AddComment(t *testing.T) {
+	repo := repository.NewMockRepository()
+	service := NewService(repo)
+
+	// Create a task first
+	createReq := task.CreateTaskRequest{
+		Title:       "Test Task",
+		Description: "Test Description",
+		AssigneeID:  1,
+		TeamID:      1,
+		Tags:        []string{"test"},
+	}
+	service.CreateTask(createReq)
+
+	// Test valid comment
+	commentReq := task.AddCommentRequest{
+		Comment: "This is a test comment",
+	}
+
+	comment, err := service.AddComment("1", 1, commentReq)
+	if err != nil {
+		t.Errorf("Expected no error, got %v", err)
+	}
+
+	if comment.Comment != "This is a test comment" {
+		t.Errorf("Expected comment 'This is a test comment', got %s", comment.Comment)
+	}
+
+	if comment.TaskID != 1 {
+		t.Errorf("Expected task ID 1, got %d", comment.TaskID)
+	}
+
+	// Test non-existent task
+	_, err = service.AddComment("999", 1, commentReq)
+	if err == nil {
+		t.Error("Expected error for non-existent task, got nil")
+	}
+}

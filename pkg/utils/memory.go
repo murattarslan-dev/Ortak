@@ -36,18 +36,28 @@ type TeamMember struct {
 	Role   string `json:"role"`
 }
 
+type TaskComment struct {
+	ID        int    `json:"id"`
+	TaskID    int    `json:"task_id"`
+	UserID    int    `json:"user_id"`
+	Comment   string `json:"comment"`
+	CreatedAt string `json:"created_at"`
+}
+
 type MemoryStorage struct {
-	users       map[int]*User
-	teams       map[int]*Team
-	tasks       map[int]*Task
-	members     map[int]*TeamMember
-	tokens      map[string]int
-	userEmails  map[string]int
-	nextUserID  int
-	nextTeamID  int
-	nextTaskID  int
+	users        map[int]*User
+	teams        map[int]*Team
+	tasks        map[int]*Task
+	members      map[int]*TeamMember
+	comments     map[int]*TaskComment
+	tokens       map[string]int
+	userEmails   map[string]int
+	nextUserID   int
+	nextTeamID   int
+	nextTaskID   int
 	nextMemberID int
-	mu          sync.RWMutex
+	nextCommentID int
+	mu           sync.RWMutex
 }
 
 var instance *MemoryStorage
@@ -56,16 +66,18 @@ var once sync.Once
 func GetMemoryStorage() *MemoryStorage {
 	once.Do(func() {
 		instance = &MemoryStorage{
-			users:        make(map[int]*User),
-			teams:        make(map[int]*Team),
-			tasks:        make(map[int]*Task),
-			members:      make(map[int]*TeamMember),
-			tokens:       make(map[string]int),
-			userEmails:   make(map[string]int),
-			nextUserID:   1,
-			nextTeamID:   1,
-			nextTaskID:   1,
-			nextMemberID: 1,
+			users:         make(map[int]*User),
+			teams:         make(map[int]*Team),
+			tasks:         make(map[int]*Task),
+			members:       make(map[int]*TeamMember),
+			comments:      make(map[int]*TaskComment),
+			tokens:        make(map[string]int),
+			userEmails:    make(map[string]int),
+			nextUserID:    1,
+			nextTeamID:    1,
+			nextTaskID:    1,
+			nextMemberID:  1,
+			nextCommentID: 1,
 		}
 	})
 	return instance
@@ -510,4 +522,47 @@ func (s *MemoryStorage) UpdateMemberRole(userID, teamID int, role string) *TeamM
 		}
 	}
 	return nil
+}
+
+// Task Comment Methods
+func (s *MemoryStorage) AddTaskComment(taskID, userID int, comment, createdAt string) *TaskComment {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	commentObj := &TaskComment{
+		ID:        s.nextCommentID,
+		TaskID:    taskID,
+		UserID:    userID,
+		Comment:   comment,
+		CreatedAt: createdAt,
+	}
+	s.comments[s.nextCommentID] = commentObj
+	s.nextCommentID++
+	return commentObj
+}
+
+func (s *MemoryStorage) GetTaskComments(taskID int) []*TaskComment {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	comments := make([]*TaskComment, 0)
+	for _, comment := range s.comments {
+		if comment.TaskID == taskID {
+			comments = append(comments, comment)
+		}
+	}
+	return comments
+}
+
+func (s *MemoryStorage) GetTaskCommentCount(taskID int) int {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	count := 0
+	for _, comment := range s.comments {
+		if comment.TaskID == taskID {
+			count++
+		}
+	}
+	return count
 }

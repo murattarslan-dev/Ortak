@@ -99,6 +99,7 @@ func main() {
 			protected.POST("/tasks", taskHandler.CreateTask)
 			protected.PUT("/tasks/:id", taskHandler.UpdateTask)
 			protected.PUT("/tasks/:id/status", taskHandler.UpdateTaskStatus)
+			protected.POST("/tasks/:id/comments", taskHandler.AddComment)
 			protected.DELETE("/tasks/:id", taskHandler.DeleteTask)
 		}
 	}

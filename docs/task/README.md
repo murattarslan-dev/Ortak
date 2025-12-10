@@ -32,7 +32,8 @@ Tüm görevleri getirir.
       "status": "in_progress",
       "assignee_id": 1,
       "team_id": 1,
-      "tags": ["backend", "api"]
+      "tags": ["backend", "api"],
+      "comment_count": 3
     },
     {
       "id": 2,
@@ -41,7 +42,8 @@ Tüm görevleri getirir.
       "status": "todo",
       "assignee_id": 2,
       "team_id": 2,
-      "tags": ["frontend", "design"]
+      "tags": ["frontend", "design"],
+      "comment_count": 1
     }
   ]
 }
@@ -54,7 +56,7 @@ Tüm görevleri getirir.
 GET /tasks/:id
 ```
 
-Belirli bir görevin detaylarını getirir.
+Belirli bir görevin detaylarını getirir. Görev detayında tüm yorumlar da döner.
 
 **Parameters:**
 - `id` (path): Görev ID'si
@@ -71,7 +73,32 @@ Belirli bir görevin detaylarını getirir.
     "status": "in_progress",
     "assignee_id": 1,
     "team_id": 1,
-    "tags": ["backend", "api"]
+    "tags": ["backend", "api"],
+    "comment_count": 2,
+    "comments": [
+      {
+        "id": 1,
+        "task_id": 1,
+        "comment": "API endpoints are looking good!",
+        "created_at": "2024-12-20T10:30:00Z",
+        "user": {
+          "id": 2,
+          "username": "john_doe",
+          "email": "john@example.com"
+        }
+      },
+      {
+        "id": 2,
+        "task_id": 1,
+        "comment": "Need to add validation",
+        "created_at": "2024-12-20T11:15:00Z",
+        "user": {
+          "id": 3,
+          "username": "jane_smith",
+          "email": "jane@example.com"
+        }
+      }
+    ]
   }
 }
 ```
@@ -111,7 +138,8 @@ Yeni görev oluşturur.
     "status": "todo",
     "assignee_id": 1,
     "team_id": 1,
-    "tags": ["testing", "backend"]
+    "tags": ["testing", "backend"],
+    "comment_count": 0
   }
 }
 ```
@@ -151,7 +179,8 @@ Mevcut görevi günceller.
     "status": "in_progress",
     "assignee_id": 2,
     "team_id": 1,
-    "tags": ["backend", "api", "urgent"]
+    "tags": ["backend", "api", "urgent"],
+    "comment_count": 3
   }
 }
 ```
@@ -191,7 +220,8 @@ Sadece görev durumunu günceller.
     "status": "in_progress",
     "assignee_id": 1,
     "team_id": 1,
-    "tags": ["backend", "api"]
+    "tags": ["backend", "api"],
+    "comment_count": 3
   }
 }
 ```
@@ -200,6 +230,50 @@ Sadece görev durumunu günceller.
 - `400 Bad Request` - Geçersiz status değeri
 - `404 Not Found` - Görev bulunamadı
 - `500 Internal Server Error` - Güncelleme hatası
+
+---
+
+### Görev Yorumu Ekle
+```http
+POST /tasks/:id/comments
+```
+
+Göreve yorum ekler.
+
+**Parameters:**
+- `id` (path): Görev ID'si
+
+**Request Body:**
+```json
+{
+  "comment": "Bu görev için API dokümantasyonu da hazırlanmalı"
+}
+```
+
+**Response (201 Created):**
+```json
+{
+  "success": true,
+  "message": "Comment added successfully",
+  "data": {
+    "id": 3,
+    "task_id": 1,
+    "comment": "Bu görev için API dokümantasyonu da hazırlanmalı",
+    "created_at": "2024-12-20T12:00:00Z",
+    "user": {
+      "id": 1,
+      "username": "admin",
+      "email": "admin@example.com"
+    }
+  }
+}
+```
+
+**Hata Durumları:**
+- `400 Bad Request` - Geçersiz istek formatı
+- `401 Unauthorized` - Kimlik doğrulama hatası
+- `404 Not Found` - Görev bulunamadı
+- `500 Internal Server Error` - Yorum ekleme hatası
 
 ---
 
@@ -252,6 +326,9 @@ Görevi siler.
 ### Update Task Status Request
 - `status`: Zorunlu, geçerli status değeri (todo, in_progress, done)
 
+### Add Comment Request
+- `comment`: Zorunlu, minimum 1 karakter
+
 ## Örnek Kullanım
 
 ### cURL Örnekleri
@@ -301,6 +378,16 @@ curl -X PUT http://localhost:8080/api/v1/tasks/1/status \
   -H "Content-Type: application/json" \
   -d '{
     "status": "done"
+  }'
+```
+
+**Görev yorumu ekle:**
+```bash
+curl -X POST http://localhost:8080/api/v1/tasks/1/comments \
+  -H "Authorization: Bearer YOUR_TOKEN_HERE" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "comment": "Great progress on this task!"
   }'
 ```
 

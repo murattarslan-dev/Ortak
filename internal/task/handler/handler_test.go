@@ -309,3 +309,95 @@ func TestHandler_UpdateTaskStatus_NotFound(t *testing.T) {
 		t.Errorf("Expected status %d, got %d", http.StatusNotFound, w.Code)
 	}
 }
+
+func TestHandler_AddComment(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	repo := repository.NewMockRepository()
+	svc := service.NewService(repo)
+	handler := NewHandler(svc)
+
+	// Create a task first
+	repo.Create("Test Task", "Test Description", 1, 1, []string{"test"})
+
+	reqData := task.AddCommentRequest{
+		Comment: "This is a test comment",
+	}
+
+	jsonData, _ := json.Marshal(reqData)
+	w := httptest.NewRecorder()
+	router := gin.New()
+	router.Use(middleware.ErrorMiddleware())
+	router.Use(middleware.FormatterMiddleware())
+	router.Use(func(c *gin.Context) {
+		c.Set("userID", 1)
+		c.Next()
+	})
+	router.POST("/tasks/:id/comments", handler.AddComment)
+
+	req := httptest.NewRequest("POST", "/tasks/1/comments", bytes.NewBuffer(jsonData))
+	req.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusCreated {
+		t.Errorf("Expected status %d, got %d", http.StatusCreated, w.Code)
+	}
+}
+
+func TestHandler_AddComment_TaskNotFound(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	repo := repository.NewMockRepository()
+	svc := service.NewService(repo)
+	handler := NewHandler(svc)
+
+	reqData := task.AddCommentRequest{
+		Comment: "This is a test comment",
+	}
+
+	jsonData, _ := json.Marshal(reqData)
+	w := httptest.NewRecorder()
+	router := gin.New()
+	router.Use(middleware.ErrorMiddleware())
+	router.Use(middleware.FormatterMiddleware())
+	router.Use(func(c *gin.Context) {
+		c.Set("userID", 1)
+		c.Next()
+	})
+	router.POST("/tasks/:id/comments", handler.AddComment)
+
+	req := httptest.NewRequest("POST", "/tasks/999/comments", bytes.NewBuffer(jsonData))
+	req.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusNotFound {
+		t.Errorf("Expected status %d, got %d", http.StatusNotFound, w.Code)
+	}
+}
+
+func TestHandler_AddComment_Unauthorized(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	repo := repository.NewMockRepository()
+	svc := service.NewService(repo)
+	handler := NewHandler(svc)
+
+	reqData := task.AddCommentRequest{
+		Comment: "This is a test comment",
+	}
+
+	jsonData, _ := json.Marshal(reqData)
+	w := httptest.NewRecorder()
+	router := gin.New()
+	router.Use(middleware.ErrorMiddleware())
+	router.Use(middleware.FormatterMiddleware())
+	router.POST("/tasks/:id/comments", handler.AddComment)
+
+	req := httptest.NewRequest("POST", "/tasks/1/comments", bytes.NewBuffer(jsonData))
+	req.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusUnauthorized {
+		t.Errorf("Expected status %d, got %d", http.StatusUnauthorized, w.Code)
+	}
+}
