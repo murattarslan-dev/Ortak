@@ -155,6 +155,46 @@ Mevcut görevi günceller.
 
 ---
 
+### Görev Durumu Güncelle
+```http
+PUT /tasks/:id/status
+```
+
+Sadece görev durumunu günceller.
+
+**Parameters:**
+- `id` (path): Görev ID'si
+
+**Request Body:**
+```json
+{
+  "status": "in_progress"
+}
+```
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "message": "Task status updated successfully",
+  "data": {
+    "id": 1,
+    "title": "Setup API",
+    "description": "Create REST API endpoints",
+    "status": "in_progress",
+    "assignee_id": 1,
+    "team_id": 1
+  }
+}
+```
+
+**Hata Durumları:**
+- `400 Bad Request` - Geçersiz status değeri
+- `404 Not Found` - Görev bulunamadı
+- `500 Internal Server Error` - Güncelleme hatası
+
+---
+
 ### Görev Sil
 ```http
 DELETE /tasks/:id
@@ -199,6 +239,9 @@ Görevi siler.
 - `status`: Opsiyonel, geçerli status değeri
 - `assignee_id`: Opsiyonel, geçerli kullanıcı ID'si
 
+### Update Task Status Request
+- `status`: Zorunlu, geçerli status değeri (todo, in_progress, done)
+
 ## Örnek Kullanım
 
 ### cURL Örnekleri
@@ -231,6 +274,17 @@ curl -X POST http://localhost:8080/api/v1/tasks \
 **Görev güncelle:**
 ```bash
 curl -X PUT http://localhost:8080/api/v1/tasks/1 \
+  -H "Authorization: Bearer YOUR_TOKEN_HERE" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "Updated Task",
+    "status": "done"
+  }'
+```
+
+**Görev durumu güncelle:**
+```bash
+curl -X PUT http://localhost:8080/api/v1/tasks/1/status \
   -H "Authorization: Bearer YOUR_TOKEN_HERE" \
   -H "Content-Type: application/json" \
   -d '{

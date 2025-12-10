@@ -73,6 +73,21 @@ func (r *RepositoryImpl) Update(id, title, description, status string, assigneeI
 	}
 }
 
+func (r *RepositoryImpl) UpdateStatus(id, status string) *task.Task {
+	storageTask := r.storage.UpdateTask(id, "", "", status, 0)
+	if storageTask == nil {
+		return nil
+	}
+	return &task.Task{
+		ID:          storageTask.ID,
+		Title:       storageTask.Title,
+		Description: storageTask.Description,
+		Status:      storageTask.Status,
+		AssigneeID:  storageTask.AssigneeID,
+		TeamID:      storageTask.TeamID,
+	}
+}
+
 func (r *RepositoryImpl) Delete(id string) error {
 	return r.storage.DeleteTask(id)
 }

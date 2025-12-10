@@ -7,5 +7,6 @@ type Repository interface {
 	GetByID(id string) *task.Task
 	Create(title, description string, assigneeID, teamID int) *task.Task
 	Update(id, title, description, status string, assigneeID int) *task.Task
+	UpdateStatus(id, status string) *task.Task
 	Delete(id string) error
 }

@@ -76,6 +76,29 @@ func (h *Handler) UpdateTask(c *gin.Context) {
 	response.SetSuccess(c, "Task updated successfully", task)
 }
 
+func (h *Handler) UpdateTaskStatus(c *gin.Context) {
+	id := c.Param("id")
+	var req task.UpdateTaskStatusRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.SetError(c, 400, "Invalid request format: "+err.Error())
+		return
+	}
+
+	task, err := h.service.UpdateTaskStatus(id, req)
+	if err != nil {
+		if err.Error() == "task not found" {
+			response.SetError(c, 404, "Task not found")
+		} else if err.Error() == "invalid status: must be todo, in_progress, or done" {
+			response.SetError(c, 400, "Invalid status: must be todo, in_progress, or done")
+		} else {
+			response.SetError(c, 500, "Failed to update task status")
+		}
+		return
+	}
+
+	response.SetSuccess(c, "Task status updated successfully", task)
+}
+
 func (h *Handler) DeleteTask(c *gin.Context) {
 	id := c.Param("id")
 	err := h.service.DeleteTask(id)

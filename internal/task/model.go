@@ -22,3 +22,7 @@ type UpdateTaskRequest struct {
 	Status      string `json:"status,omitempty"`
 	AssigneeID  int    `json:"assignee_id,omitempty"`
 }
+
+type UpdateTaskStatusRequest struct {
+	Status string `json:"status" binding:"required"`
+}

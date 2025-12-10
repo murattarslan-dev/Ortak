@@ -221,3 +221,90 @@ func TestHandler_DeleteTask_NotFound(t *testing.T) {
 		t.Errorf("Expected status %d, got %d", http.StatusNotFound, w.Code)
 	}
 }
+
+func TestHandler_UpdateTaskStatus(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	repo := repository.NewMockRepository()
+	svc := service.NewService(repo)
+	handler := NewHandler(svc)
+
+	// Create a task first
+	repo.Create("Test Task", "Test Description", 1, 1)
+
+	reqData := task.UpdateTaskStatusRequest{
+		Status: "in_progress",
+	}
+
+	jsonData, _ := json.Marshal(reqData)
+	w := httptest.NewRecorder()
+	router := gin.New()
+	router.Use(middleware.ErrorMiddleware())
+	router.Use(middleware.FormatterMiddleware())
+	router.PATCH("/tasks/:id/status", handler.UpdateTaskStatus)
+
+	req := httptest.NewRequest("PATCH", "/tasks/1/status", bytes.NewBuffer(jsonData))
+	req.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("Expected status %d, got %d", http.StatusOK, w.Code)
+	}
+}
+
+func TestHandler_UpdateTaskStatus_InvalidStatus(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	repo := repository.NewMockRepository()
+	svc := service.NewService(repo)
+	handler := NewHandler(svc)
+
+	// Create a task first
+	repo.Create("Test Task", "Test Description", 1, 1)
+
+	reqData := task.UpdateTaskStatusRequest{
+		Status: "invalid_status",
+	}
+
+	jsonData, _ := json.Marshal(reqData)
+	w := httptest.NewRecorder()
+	router := gin.New()
+	router.Use(middleware.ErrorMiddleware())
+	router.Use(middleware.FormatterMiddleware())
+	router.PATCH("/tasks/:id/status", handler.UpdateTaskStatus)
+
+	req := httptest.NewRequest("PATCH", "/tasks/1/status", bytes.NewBuffer(jsonData))
+	req.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("Expected status %d, got %d", http.StatusBadRequest, w.Code)
+	}
+}
+
+func TestHandler_UpdateTaskStatus_NotFound(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	repo := repository.NewMockRepository()
+	svc := service.NewService(repo)
+	handler := NewHandler(svc)
+
+	reqData := task.UpdateTaskStatusRequest{
+		Status: "in_progress",
+	}
+
+	jsonData, _ := json.Marshal(reqData)
+	w := httptest.NewRecorder()
+	router := gin.New()
+	router.Use(middleware.ErrorMiddleware())
+	router.Use(middleware.FormatterMiddleware())
+	router.PATCH("/tasks/:id/status", handler.UpdateTaskStatus)
+
+	req := httptest.NewRequest("PATCH", "/tasks/999/status", bytes.NewBuffer(jsonData))
+	req.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusNotFound {
+		t.Errorf("Expected status %d, got %d", http.StatusNotFound, w.Code)
+	}
+}

@@ -62,6 +62,16 @@ func (m *MockRepository) Update(id, title, description, status string, assigneeI
 	return nil
 }
 
+func (m *MockRepository) UpdateStatus(id, status string) *task.Task {
+	for i, t := range m.tasks {
+		if fmt.Sprintf("%d", t.ID) == id {
+			m.tasks[i].Status = status
+			return &m.tasks[i]
+		}
+	}
+	return nil
+}
+
 func (m *MockRepository) Delete(id string) error {
 	for i, t := range m.tasks {
 		if fmt.Sprintf("%d", t.ID) == id {

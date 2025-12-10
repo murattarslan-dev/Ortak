@@ -80,7 +80,7 @@ func main() {
 		protected := api.Group("/")
 		protected.Use(middleware.AuthMiddleware())
 		{
-			protected.DELETE("/logout", authHandler.Logout)
+			protected.POST("/logout", authHandler.Logout)
 			protected.GET("/users", userHandler.GetUsers)
 			protected.GET("/users/:id", userHandler.GetUser)
 			protected.POST("/users", userHandler.CreateUser)
@@ -98,6 +98,7 @@ func main() {
 			protected.GET("/tasks/:id", taskHandler.GetTask)
 			protected.POST("/tasks", taskHandler.CreateTask)
 			protected.PUT("/tasks/:id", taskHandler.UpdateTask)
+			protected.PUT("/tasks/:id/status", taskHandler.UpdateTaskStatus)
 			protected.DELETE("/tasks/:id", taskHandler.DeleteTask)
 		}
 	}

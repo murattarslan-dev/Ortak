@@ -56,6 +56,28 @@ func (s *Service) UpdateTask(id string, req task.UpdateTaskRequest) (*task.Task,
 	return s.repo.Update(id, req.Title, req.Description, req.Status, req.AssigneeID), nil
 }
 
+func (s *Service) UpdateTaskStatus(id string, req task.UpdateTaskStatusRequest) (*task.Task, error) {
+	existingTask := s.repo.GetByID(id)
+	if existingTask == nil {
+		return nil, fmt.Errorf("task not found")
+	}
+
+	// Validate status
+	validStatuses := []string{"todo", "in_progress", "done"}
+	valid := false
+	for _, status := range validStatuses {
+		if req.Status == status {
+			valid = true
+			break
+		}
+	}
+	if !valid {
+		return nil, fmt.Errorf("invalid status: must be todo, in_progress, or done")
+	}
+
+	return s.repo.UpdateStatus(id, req.Status), nil
+}
+
 func (s *Service) DeleteTask(id string) error {
 	existingTask := s.repo.GetByID(id)
 	if existingTask == nil {
