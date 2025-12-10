@@ -47,6 +47,7 @@ func TestHandler_CreateTask(t *testing.T) {
 		Description: "Test Description",
 		AssigneeID:  1,
 		TeamID:      1,
+		Tags:        []string{"test", "api"},
 	}
 
 	jsonData, _ := json.Marshal(reqData)
@@ -73,7 +74,7 @@ func TestHandler_GetTask(t *testing.T) {
 	handler := NewHandler(svc)
 
 	// Create a task first
-	repo.Create("Test Task", "Test Description", 1, 1)
+	repo.Create("Test Task", "Test Description", 1, 1, []string{"test"})
 
 	w := httptest.NewRecorder()
 	router := gin.New()
@@ -118,7 +119,7 @@ func TestHandler_UpdateTask(t *testing.T) {
 	handler := NewHandler(svc)
 
 	// Create a task first
-	repo.Create("Test Task", "Test Description", 1, 1)
+	repo.Create("Test Task", "Test Description", 1, 1, []string{"test"})
 
 	reqData := task.UpdateTaskRequest{
 		Title:       "Updated Task",
@@ -150,7 +151,7 @@ func TestHandler_UpdateTask_InvalidStatus(t *testing.T) {
 	handler := NewHandler(svc)
 
 	// Create a task first
-	repo.Create("Test Task", "Test Description", 1, 1)
+	repo.Create("Test Task", "Test Description", 1, 1, []string{"test"})
 
 	// Test different invalid statuses
 	invalidStatuses := []string{"invalid_status", "pending", "completed", "cancelled", ""}
@@ -171,8 +172,8 @@ func TestHandler_UpdateTask_InvalidStatus(t *testing.T) {
 		req.Header.Set("Content-Type", "application/json")
 		router.ServeHTTP(w, req)
 
-		if invalidStatus != "" && w.Code != http.StatusInternalServerError {
-			t.Errorf("Expected status %d for invalid status '%s', got %d", http.StatusInternalServerError, invalidStatus, w.Code)
+		if invalidStatus != "" && w.Code != http.StatusBadRequest {
+			t.Errorf("Expected status %d for invalid status '%s', got %d", http.StatusBadRequest, invalidStatus, w.Code)
 		}
 	}
 }
@@ -185,7 +186,7 @@ func TestHandler_DeleteTask(t *testing.T) {
 	handler := NewHandler(svc)
 
 	// Create a task first
-	repo.Create("Test Task", "Test Description", 1, 1)
+	repo.Create("Test Task", "Test Description", 1, 1, []string{"test"})
 
 	w := httptest.NewRecorder()
 	router := gin.New()
@@ -230,7 +231,7 @@ func TestHandler_UpdateTaskStatus(t *testing.T) {
 	handler := NewHandler(svc)
 
 	// Create a task first
-	repo.Create("Test Task", "Test Description", 1, 1)
+	repo.Create("Test Task", "Test Description", 1, 1, []string{"test"})
 
 	reqData := task.UpdateTaskStatusRequest{
 		Status: "in_progress",
@@ -260,7 +261,7 @@ func TestHandler_UpdateTaskStatus_InvalidStatus(t *testing.T) {
 	handler := NewHandler(svc)
 
 	// Create a task first
-	repo.Create("Test Task", "Test Description", 1, 1)
+	repo.Create("Test Task", "Test Description", 1, 1, []string{"test"})
 
 	reqData := task.UpdateTaskStatusRequest{
 		Status: "invalid_status",

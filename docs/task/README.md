@@ -31,7 +31,8 @@ Tüm görevleri getirir.
       "description": "Create REST API endpoints",
       "status": "in_progress",
       "assignee_id": 1,
-      "team_id": 1
+      "team_id": 1,
+      "tags": ["backend", "api"]
     },
     {
       "id": 2,
@@ -39,7 +40,8 @@ Tüm görevleri getirir.
       "description": "Create user interface mockups",
       "status": "todo",
       "assignee_id": 2,
-      "team_id": 2
+      "team_id": 2,
+      "tags": ["frontend", "design"]
     }
   ]
 }
@@ -68,7 +70,8 @@ Belirli bir görevin detaylarını getirir.
     "description": "Create REST API endpoints",
     "status": "in_progress",
     "assignee_id": 1,
-    "team_id": 1
+    "team_id": 1,
+    "tags": ["backend", "api"]
   }
 }
 ```
@@ -91,7 +94,8 @@ Yeni görev oluşturur.
   "title": "Write Tests",
   "description": "Write unit tests for API endpoints",
   "assignee_id": 1,
-  "team_id": 1
+  "team_id": 1,
+  "tags": ["testing", "backend"]
 }
 ```
 
@@ -106,7 +110,8 @@ Yeni görev oluşturur.
     "description": "Write unit tests for API endpoints",
     "status": "todo",
     "assignee_id": 1,
-    "team_id": 1
+    "team_id": 1,
+    "tags": ["testing", "backend"]
   }
 }
 ```
@@ -129,7 +134,8 @@ Mevcut görevi günceller.
   "title": "Updated Task Title",
   "description": "Updated task description",
   "status": "in_progress",
-  "assignee_id": 2
+  "assignee_id": 2,
+  "tags": ["backend", "api", "urgent"]
 }
 ```
 
@@ -144,7 +150,8 @@ Mevcut görevi günceller.
     "description": "Updated task description",
     "status": "in_progress",
     "assignee_id": 2,
-    "team_id": 1
+    "team_id": 1,
+    "tags": ["backend", "api", "urgent"]
   }
 }
 ```
@@ -183,7 +190,8 @@ Sadece görev durumunu günceller.
     "description": "Create REST API endpoints",
     "status": "in_progress",
     "assignee_id": 1,
-    "team_id": 1
+    "team_id": 1,
+    "tags": ["backend", "api"]
   }
 }
 ```
@@ -232,12 +240,14 @@ Görevi siler.
 - `description`: Opsiyonel
 - `assignee_id`: Zorunlu, geçerli kullanıcı ID'si
 - `team_id`: Zorunlu, geçerli takım ID'si
+- `tags`: Opsiyonel, string array (etiketler)
 
 ### Update Task Request
 - `title`: Opsiyonel, minimum 3 karakter
 - `description`: Opsiyonel
 - `status`: Opsiyonel, geçerli status değeri
 - `assignee_id`: Opsiyonel, geçerli kullanıcı ID'si
+- `tags`: Opsiyonel, string array (etiketler)
 
 ### Update Task Status Request
 - `status`: Zorunlu, geçerli status değeri (todo, in_progress, done)
@@ -267,7 +277,8 @@ curl -X POST http://localhost:8080/api/v1/tasks \
     "title": "New Task",
     "description": "Task description",
     "assignee_id": 1,
-    "team_id": 1
+    "team_id": 1,
+    "tags": ["backend", "api"]
   }'
 ```
 
@@ -278,7 +289,8 @@ curl -X PUT http://localhost:8080/api/v1/tasks/1 \
   -H "Content-Type: application/json" \
   -d '{
     "title": "Updated Task",
-    "status": "done"
+    "status": "done",
+    "tags": ["backend", "completed"]
   }'
 ```
 

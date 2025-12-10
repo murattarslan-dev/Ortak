@@ -26,6 +26,7 @@ type Task struct {
 	Status      string `json:"status"`
 	AssigneeID  int    `json:"assignee_id"`
 	TeamID      int    `json:"team_id"`
+	Tags        string `json:"tags"`
 }
 
 type TeamMember struct {
@@ -332,6 +333,7 @@ func (s *MemoryStorage) CreateTask(title, description string, assigneeID, teamID
 		Status:      "todo",
 		AssigneeID:  assigneeID,
 		TeamID:      teamID,
+		Tags:        "",
 	}
 	s.tasks[s.nextTaskID] = task
 	s.nextTaskID++
@@ -367,7 +369,7 @@ func (s *MemoryStorage) GetTaskByID(id string) *Task {
 	return s.tasks[taskID]
 }
 
-func (s *MemoryStorage) UpdateTask(id, title, description, status string, assigneeID int) *Task {
+func (s *MemoryStorage) UpdateTask(id, title, description, status, tags string, assigneeID int) *Task {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -397,6 +399,9 @@ func (s *MemoryStorage) UpdateTask(id, title, description, status string, assign
 	}
 	if status != "" {
 		task.Status = status
+	}
+	if tags != "" {
+		task.Tags = tags
 	}
 	if assigneeID != 0 {
 		task.AssigneeID = assigneeID

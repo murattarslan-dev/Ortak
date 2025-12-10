@@ -3,6 +3,7 @@ package repository
 import (
 	"ortak/internal/task"
 	"ortak/pkg/utils"
+	"strings"
 )
 
 type RepositoryImpl struct {
@@ -26,13 +27,28 @@ func (r *RepositoryImpl) GetAll() []task.Task {
 			Status:      t.Status,
 			AssigneeID:  t.AssigneeID,
 			TeamID:      t.TeamID,
+			Tags:        r.stringToTags(t.Tags),
 		}
 	}
 	return tasks
 }
 
-func (r *RepositoryImpl) Create(title, description string, assigneeID, teamID int) *task.Task {
+func (r *RepositoryImpl) stringToTags(tagStr string) []string {
+	if tagStr == "" {
+		return []string{}
+	}
+	return strings.Split(tagStr, "{$^#}")
+}
+
+func (r *RepositoryImpl) tagsToString(tags []string) string {
+	return strings.Join(tags, "{$^#}")
+}
+
+func (r *RepositoryImpl) Create(title, description string, assigneeID, teamID int, tags []string) *task.Task {
 	storageTask := r.storage.CreateTask(title, description, assigneeID, teamID)
+	if len(tags) > 0 {
+		storageTask.Tags = r.tagsToString(tags)
+	}
 	return &task.Task{
 		ID:          storageTask.ID,
 		Title:       storageTask.Title,
@@ -40,6 +56,7 @@ func (r *RepositoryImpl) Create(title, description string, assigneeID, teamID in
 		Status:      storageTask.Status,
 		AssigneeID:  storageTask.AssigneeID,
 		TeamID:      storageTask.TeamID,
+		Tags:        r.stringToTags(storageTask.Tags),
 	}
 }
 
@@ -55,11 +72,16 @@ func (r *RepositoryImpl) GetByID(id string) *task.Task {
 		Status:      storageTask.Status,
 		AssigneeID:  storageTask.AssigneeID,
 		TeamID:      storageTask.TeamID,
+		Tags:        r.stringToTags(storageTask.Tags),
 	}
 }
 
-func (r *RepositoryImpl) Update(id, title, description, status string, assigneeID int) *task.Task {
-	storageTask := r.storage.UpdateTask(id, title, description, status, assigneeID)
+func (r *RepositoryImpl) Update(id, title, description, status string, assigneeID int, tags []string) *task.Task {
+	tagsStr := ""
+	if len(tags) > 0 {
+		tagsStr = r.tagsToString(tags)
+	}
+	storageTask := r.storage.UpdateTask(id, title, description, status, tagsStr, assigneeID)
 	if storageTask == nil {
 		return nil
 	}
@@ -70,11 +92,12 @@ func (r *RepositoryImpl) Update(id, title, description, status string, assigneeI
 		Status:      storageTask.Status,
 		AssigneeID:  storageTask.AssigneeID,
 		TeamID:      storageTask.TeamID,
+		Tags:        r.stringToTags(storageTask.Tags),
 	}
 }
 
 func (r *RepositoryImpl) UpdateStatus(id, status string) *task.Task {
-	storageTask := r.storage.UpdateTask(id, "", "", status, 0)
+	storageTask := r.storage.UpdateTask(id, "", "", status, "", 0)
 	if storageTask == nil {
 		return nil
 	}
@@ -85,6 +108,7 @@ func (r *RepositoryImpl) UpdateStatus(id, status string) *task.Task {
 		Status:      storageTask.Status,
 		AssigneeID:  storageTask.AssigneeID,
 		TeamID:      storageTask.TeamID,
+		Tags:        r.stringToTags(storageTask.Tags),
 	}
 }
 

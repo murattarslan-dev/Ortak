@@ -29,6 +29,7 @@ func TestService_CreateTask(t *testing.T) {
 		Description: "Test Description",
 		AssigneeID:  1,
 		TeamID:      1,
+		Tags:        []string{"backend", "api"},
 	}
 
 	createdTask, err := service.CreateTask(req)
@@ -65,6 +66,7 @@ func TestService_UpdateTaskStatus(t *testing.T) {
 		Description: "Test Description",
 		AssigneeID:  1,
 		TeamID:      1,
+		Tags:        []string{"test"},
 	}
 	_, _ = service.CreateTask(createReq)
 

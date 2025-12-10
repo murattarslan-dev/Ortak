@@ -21,7 +21,7 @@ func (s *Service) GetTasks() ([]task.Task, error) {
 }
 
 func (s *Service) CreateTask(req task.CreateTaskRequest) (*task.Task, error) {
-	return s.repo.Create(req.Title, req.Description, req.AssigneeID, req.TeamID), nil
+	return s.repo.Create(req.Title, req.Description, req.AssigneeID, req.TeamID, req.Tags), nil
 }
 
 func (s *Service) GetTaskByID(id string) (*task.Task, error) {
@@ -53,7 +53,7 @@ func (s *Service) UpdateTask(id string, req task.UpdateTaskRequest) (*task.Task,
 		}
 	}
 
-	return s.repo.Update(id, req.Title, req.Description, req.Status, req.AssigneeID), nil
+	return s.repo.Update(id, req.Title, req.Description, req.Status, req.AssigneeID, req.Tags), nil
 }
 
 func (s *Service) UpdateTaskStatus(id string, req task.UpdateTaskStatusRequest) (*task.Task, error) {

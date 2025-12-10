@@ -19,7 +19,7 @@ func (m *MockRepository) GetAll() []task.Task {
 	return m.tasks
 }
 
-func (m *MockRepository) Create(title, description string, assigneeID, teamID int) *task.Task {
+func (m *MockRepository) Create(title, description string, assigneeID, teamID int, tags []string) *task.Task {
 	task := &task.Task{
 		ID:          len(m.tasks) + 1,
 		Title:       title,
@@ -27,6 +27,7 @@ func (m *MockRepository) Create(title, description string, assigneeID, teamID in
 		Status:      "todo",
 		AssigneeID:  assigneeID,
 		TeamID:      teamID,
+		Tags:        tags,
 	}
 	m.tasks = append(m.tasks, *task)
 	return task
@@ -41,7 +42,7 @@ func (m *MockRepository) GetByID(id string) *task.Task {
 	return nil
 }
 
-func (m *MockRepository) Update(id, title, description, status string, assigneeID int) *task.Task {
+func (m *MockRepository) Update(id, title, description, status string, assigneeID int, tags []string) *task.Task {
 	for i, t := range m.tasks {
 		if fmt.Sprintf("%d", t.ID) == id {
 			if title != "" {
@@ -55,6 +56,9 @@ func (m *MockRepository) Update(id, title, description, status string, assigneeI
 			}
 			if assigneeID != 0 {
 				m.tasks[i].AssigneeID = assigneeID
+			}
+			if len(tags) > 0 {
+				m.tasks[i].Tags = tags
 			}
 			return &m.tasks[i]
 		}
