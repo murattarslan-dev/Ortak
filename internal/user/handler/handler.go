@@ -63,7 +63,11 @@ func (h *Handler) UpdateUser(c *gin.Context) {
 
 	user, err := h.service.UpdateUser(id, req)
 	if err != nil {
-		response.SetError(c, 500, "Failed to update user")
+		if err.Error() == "user not found" {
+			response.SetError(c, 404, "User not found")
+		} else {
+			response.SetError(c, 500, "Failed to update user")
+		}
 		return
 	}
 
@@ -74,7 +78,11 @@ func (h *Handler) DeleteUser(c *gin.Context) {
 	id := c.Param("id")
 	err := h.service.DeleteUser(id)
 	if err != nil {
-		response.SetError(c, 500, "Failed to delete user")
+		if err.Error() == "user not found" {
+			response.SetError(c, 404, "User not found")
+		} else {
+			response.SetError(c, 500, "Failed to delete user")
+		}
 		return
 	}
 

@@ -26,18 +26,48 @@ type Task struct {
 	Status      string `json:"status"`
 	AssigneeID  int    `json:"assignee_id"`
 	TeamID      int    `json:"team_id"`
+	Tags        string `json:"tags"`
+}
+
+type TeamMember struct {
+	ID     int    `json:"id"`
+	UserID int    `json:"user_id"`
+	TeamID int    `json:"team_id"`
+	Role   string `json:"role"`
+}
+
+type TaskComment struct {
+	ID        int    `json:"id"`
+	TaskID    int    `json:"task_id"`
+	UserID    int    `json:"user_id"`
+	Comment   string `json:"comment"`
+	CreatedAt string `json:"created_at"`
+}
+
+type TaskAssignment struct {
+	ID         int    `json:"id"`
+	TaskID     int    `json:"task_id"`
+	AssignType string `json:"assign_type"`
+	AssignID   int    `json:"assign_id"`
+	CreatedAt  string `json:"created_at"`
 }
 
 type MemoryStorage struct {
-	users      map[int]*User
-	teams      map[int]*Team
-	tasks      map[int]*Task
-	tokens     map[string]int
-	userEmails map[string]int
-	nextUserID int
-	nextTeamID int
-	nextTaskID int
-	mu         sync.RWMutex
+	users           map[int]*User
+	teams           map[int]*Team
+	tasks           map[int]*Task
+	members         map[int]*TeamMember
+	comments        map[int]*TaskComment
+	assignments     map[int]*TaskAssignment
+	tokens          map[string]int
+	userEmails      map[string]int
+	nextUserID      int
+	nextTeamID      int
+	nextTaskID      int
+	nextMemberID    int
+	nextCommentID   int
+	nextAssignmentID int
+	mu              sync.RWMutex
 }
 
 var instance *MemoryStorage
@@ -46,14 +76,20 @@ var once sync.Once
 func GetMemoryStorage() *MemoryStorage {
 	once.Do(func() {
 		instance = &MemoryStorage{
-			users:      make(map[int]*User),
-			teams:      make(map[int]*Team),
-			tasks:      make(map[int]*Task),
-			tokens:     make(map[string]int),
-			userEmails: make(map[string]int),
-			nextUserID: 1,
-			nextTeamID: 1,
-			nextTaskID: 1,
+			users:            make(map[int]*User),
+			teams:            make(map[int]*Team),
+			tasks:            make(map[int]*Task),
+			members:          make(map[int]*TeamMember),
+			comments:         make(map[int]*TaskComment),
+			assignments:      make(map[int]*TaskAssignment),
+			tokens:           make(map[string]int),
+			userEmails:       make(map[string]int),
+			nextUserID:       1,
+			nextTeamID:       1,
+			nextTaskID:       1,
+			nextMemberID:     1,
+			nextCommentID:    1,
+			nextAssignmentID: 1,
 		}
 	})
 	return instance
@@ -233,6 +269,83 @@ func (s *MemoryStorage) GetAllTeams() []*Team {
 	return teams
 }
 
+func (s *MemoryStorage) GetTeamByID(id string) *Team {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	// Convert string ID to int
+	teamID := 0
+	for i := range s.teams {
+		if fmt.Sprintf("%d", i) == id {
+			teamID = i
+			break
+		}
+	}
+	if teamID == 0 {
+		return nil
+	}
+	return s.teams[teamID]
+}
+
+func (s *MemoryStorage) UpdateTeam(id, name, description string) *Team {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	// Convert string ID to int
+	teamID := 0
+	for i := range s.teams {
+		if fmt.Sprintf("%d", i) == id {
+			teamID = i
+			break
+		}
+	}
+	if teamID == 0 {
+		return nil
+	}
+
+	team := s.teams[teamID]
+	if team == nil {
+		return nil
+	}
+
+	// Update only provided fields
+	if name != "" {
+		team.Name = name
+	}
+	if description != "" {
+		team.Description = description
+	}
+
+	return team
+}
+
+func (s *MemoryStorage) DeleteTeam(id string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	// Convert string ID to int
+	teamID := 0
+	for i := range s.teams {
+		if fmt.Sprintf("%d", i) == id {
+			teamID = i
+			break
+		}
+	}
+	if teamID == 0 {
+		return fmt.Errorf("team not found")
+	}
+
+	team := s.teams[teamID]
+	if team == nil {
+		return fmt.Errorf("team not found")
+	}
+
+	// Remove team
+	delete(s.teams, teamID)
+
+	return nil
+}
+
 func (s *MemoryStorage) CreateTask(title, description string, assigneeID, teamID int) *Task {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -244,6 +357,7 @@ func (s *MemoryStorage) CreateTask(title, description string, assigneeID, teamID
 		Status:      "todo",
 		AssigneeID:  assigneeID,
 		TeamID:      teamID,
+		Tags:        "",
 	}
 	s.tasks[s.nextTaskID] = task
 	s.nextTaskID++
@@ -259,4 +373,249 @@ func (s *MemoryStorage) GetAllTasks() []*Task {
 		tasks = append(tasks, task)
 	}
 	return tasks
+}
+
+func (s *MemoryStorage) GetTaskByID(id string) *Task {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	// Convert string ID to int
+	taskID := 0
+	for i := range s.tasks {
+		if fmt.Sprintf("%d", i) == id {
+			taskID = i
+			break
+		}
+	}
+	if taskID == 0 {
+		return nil
+	}
+	return s.tasks[taskID]
+}
+
+func (s *MemoryStorage) UpdateTask(id, title, description, status, tags string, assigneeID int) *Task {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	// Convert string ID to int
+	taskID := 0
+	for i := range s.tasks {
+		if fmt.Sprintf("%d", i) == id {
+			taskID = i
+			break
+		}
+	}
+	if taskID == 0 {
+		return nil
+	}
+
+	task := s.tasks[taskID]
+	if task == nil {
+		return nil
+	}
+
+	// Update only provided fields
+	if title != "" {
+		task.Title = title
+	}
+	if description != "" {
+		task.Description = description
+	}
+	if status != "" {
+		task.Status = status
+	}
+	if tags != "" {
+		task.Tags = tags
+	}
+	if assigneeID != 0 {
+		task.AssigneeID = assigneeID
+	}
+
+	return task
+}
+
+func (s *MemoryStorage) DeleteTask(id string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	// Convert string ID to int
+	taskID := 0
+	for i := range s.tasks {
+		if fmt.Sprintf("%d", i) == id {
+			taskID = i
+			break
+		}
+	}
+	if taskID == 0 {
+		return fmt.Errorf("task not found")
+	}
+
+	task := s.tasks[taskID]
+	if task == nil {
+		return fmt.Errorf("task not found")
+	}
+
+	// Remove task
+	delete(s.tasks, taskID)
+
+	return nil
+}
+
+// Team Membership Methods
+func (s *MemoryStorage) AddTeamMember(userID, teamID int, role string) *TeamMember {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	// Check if membership already exists
+	for _, member := range s.members {
+		if member.UserID == userID && member.TeamID == teamID {
+			return member // Already a member
+		}
+	}
+
+	member := &TeamMember{
+		ID:     s.nextMemberID,
+		UserID: userID,
+		TeamID: teamID,
+		Role:   role,
+	}
+	s.members[s.nextMemberID] = member
+	s.nextMemberID++
+	return member
+}
+
+func (s *MemoryStorage) RemoveTeamMember(userID, teamID int) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	for id, member := range s.members {
+		if member.UserID == userID && member.TeamID == teamID {
+			delete(s.members, id)
+			return nil
+		}
+	}
+	return fmt.Errorf("membership not found")
+}
+
+func (s *MemoryStorage) GetTeamMembers(teamID int) []*TeamMember {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	members := make([]*TeamMember, 0)
+	for _, member := range s.members {
+		if member.TeamID == teamID {
+			members = append(members, member)
+		}
+	}
+	return members
+}
+
+func (s *MemoryStorage) GetUserTeams(userID int) []*TeamMember {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	members := make([]*TeamMember, 0)
+	for _, member := range s.members {
+		if member.UserID == userID {
+			members = append(members, member)
+		}
+	}
+	return members
+}
+
+func (s *MemoryStorage) UpdateMemberRole(userID, teamID int, role string) *TeamMember {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	for _, member := range s.members {
+		if member.UserID == userID && member.TeamID == teamID {
+			member.Role = role
+			return member
+		}
+	}
+	return nil
+}
+
+// Task Comment Methods
+func (s *MemoryStorage) AddTaskComment(taskID, userID int, comment, createdAt string) *TaskComment {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	commentObj := &TaskComment{
+		ID:        s.nextCommentID,
+		TaskID:    taskID,
+		UserID:    userID,
+		Comment:   comment,
+		CreatedAt: createdAt,
+	}
+	s.comments[s.nextCommentID] = commentObj
+	s.nextCommentID++
+	return commentObj
+}
+
+func (s *MemoryStorage) GetTaskComments(taskID int) []*TaskComment {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	comments := make([]*TaskComment, 0)
+	for _, comment := range s.comments {
+		if comment.TaskID == taskID {
+			comments = append(comments, comment)
+		}
+	}
+	return comments
+}
+
+func (s *MemoryStorage) GetTaskCommentCount(taskID int) int {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	count := 0
+	for _, comment := range s.comments {
+		if comment.TaskID == taskID {
+			count++
+		}
+	}
+	return count
+}
+
+// Task Assignment Methods
+func (s *MemoryStorage) AddTaskAssignment(taskID int, assignType string, assignID int, createdAt string) *TaskAssignment {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	assignment := &TaskAssignment{
+		ID:         s.nextAssignmentID,
+		TaskID:     taskID,
+		AssignType: assignType,
+		AssignID:   assignID,
+		CreatedAt:  createdAt,
+	}
+	s.assignments[s.nextAssignmentID] = assignment
+	s.nextAssignmentID++
+	return assignment
+}
+
+func (s *MemoryStorage) GetTaskAssignments(taskID int) []*TaskAssignment {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	assignments := make([]*TaskAssignment, 0)
+	for _, assignment := range s.assignments {
+		if assignment.TaskID == taskID {
+			assignments = append(assignments, assignment)
+		}
+	}
+	return assignments
+}
+
+func (s *MemoryStorage) DeleteTaskAssignment(assignmentID int) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if _, exists := s.assignments[assignmentID]; !exists {
+		return fmt.Errorf("assignment not found")
+	}
+	delete(s.assignments, assignmentID)
+	return nil
 }

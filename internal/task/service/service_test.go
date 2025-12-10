@@ -29,6 +29,7 @@ func TestService_CreateTask(t *testing.T) {
 		Description: "Test Description",
 		AssigneeID:  1,
 		TeamID:      1,
+		Tags:        []string{"backend", "api"},
 	}
 
 	createdTask, err := service.CreateTask(req)
@@ -52,5 +53,155 @@ func TestService_CreateTask(t *testing.T) {
 	tasks, _ := service.GetTasks()
 	if len(tasks) != 1 {
 		t.Errorf("Expected 1 task, got %d", len(tasks))
+	}
+}
+
+func TestService_UpdateTaskStatus(t *testing.T) {
+	repo := repository.NewMockRepository()
+	service := NewService(repo)
+
+	// Create a task first
+	createReq := task.CreateTaskRequest{
+		Title:       "Test Task",
+		Description: "Test Description",
+		AssigneeID:  1,
+		TeamID:      1,
+		Tags:        []string{"test"},
+	}
+	_, _ = service.CreateTask(createReq)
+
+	// Test valid status update
+	updateReq := task.UpdateTaskStatusRequest{
+		Status: "in_progress",
+	}
+
+	updatedTask, err := service.UpdateTaskStatus("1", updateReq)
+	if err != nil {
+		t.Errorf("Expected no error, got %v", err)
+	}
+
+	if updatedTask.Status != "in_progress" {
+		t.Errorf("Expected status in_progress, got %s", updatedTask.Status)
+	}
+
+	// Test invalid status
+	invalidReq := task.UpdateTaskStatusRequest{
+		Status: "invalid_status",
+	}
+
+	_, err = service.UpdateTaskStatus("1", invalidReq)
+	if err == nil {
+		t.Error("Expected error for invalid status, got nil")
+	}
+
+	// Test non-existent task
+	_, err = service.UpdateTaskStatus("999", updateReq)
+	if err == nil {
+		t.Error("Expected error for non-existent task, got nil")
+	}
+}
+
+func TestService_AddComment(t *testing.T) {
+	repo := repository.NewMockRepository()
+	service := NewService(repo)
+
+	// Create a task first
+	createReq := task.CreateTaskRequest{
+		Title:       "Test Task",
+		Description: "Test Description",
+		AssigneeID:  1,
+		TeamID:      1,
+		Tags:        []string{"test"},
+	}
+	service.CreateTask(createReq)
+
+	// Test valid comment
+	commentReq := task.AddCommentRequest{
+		Comment: "This is a test comment",
+	}
+
+	comment, err := service.AddComment("1", 1, commentReq)
+	if err != nil {
+		t.Errorf("Expected no error, got %v", err)
+	}
+
+	if comment.Comment != "This is a test comment" {
+		t.Errorf("Expected comment 'This is a test comment', got %s", comment.Comment)
+	}
+
+	if comment.TaskID != 1 {
+		t.Errorf("Expected task ID 1, got %d", comment.TaskID)
+	}
+
+	// Test non-existent task
+	_, err = service.AddComment("999", 1, commentReq)
+	if err == nil {
+		t.Error("Expected error for non-existent task, got nil")
+	}
+}
+
+func TestService_AddAssignment(t *testing.T) {
+	repo := repository.NewMockRepository()
+	service := NewService(repo)
+
+	// Create a task first
+	createReq := task.CreateTaskRequest{
+		Title:       "Test Task",
+		Description: "Test Description",
+		AssigneeID:  1,
+		TeamID:      1,
+		Tags:        []string{"test"},
+	}
+	service.CreateTask(createReq)
+
+	// Test user assignment
+	userAssignReq := task.AddAssignmentRequest{
+		AssignType: "user",
+		AssignID:   5,
+	}
+
+	assignment, err := service.AddAssignment("1", userAssignReq)
+	if err != nil {
+		t.Errorf("Expected no error, got %v", err)
+	}
+
+	if assignment.AssignType != "user" {
+		t.Errorf("Expected assign_type 'user', got %s", assignment.AssignType)
+	}
+
+	if assignment.AssignID != 5 {
+		t.Errorf("Expected assign_id 5, got %d", assignment.AssignID)
+	}
+
+	// Test team assignment
+	teamAssignReq := task.AddAssignmentRequest{
+		AssignType: "team",
+		AssignID:   2,
+	}
+
+	teamAssignment, err := service.AddAssignment("1", teamAssignReq)
+	if err != nil {
+		t.Errorf("Expected no error, got %v", err)
+	}
+
+	if teamAssignment.AssignType != "team" {
+		t.Errorf("Expected assign_type 'team', got %s", teamAssignment.AssignType)
+	}
+
+	// Test invalid assign_type
+	invalidReq := task.AddAssignmentRequest{
+		AssignType: "invalid",
+		AssignID:   1,
+	}
+
+	_, err = service.AddAssignment("1", invalidReq)
+	if err == nil {
+		t.Error("Expected error for invalid assign_type, got nil")
+	}
+
+	// Test non-existent task
+	_, err = service.AddAssignment("999", userAssignReq)
+	if err == nil {
+		t.Error("Expected error for non-existent task, got nil")
 	}
 }

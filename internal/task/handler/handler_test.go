@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"ortak/internal/middleware"
 	"ortak/internal/task"
 	"ortak/internal/task/repository"
 	"ortak/internal/task/service"
@@ -15,16 +16,19 @@ import (
 
 func TestHandler_GetTasks(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	
+
 	repo := repository.NewMockRepository()
 	svc := service.NewService(repo)
 	handler := NewHandler(svc)
 
 	w := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(w)
-	c.Request = httptest.NewRequest("GET", "/tasks", nil)
+	router := gin.New()
+	router.Use(middleware.ErrorMiddleware())
+	router.Use(middleware.FormatterMiddleware())
+	router.GET("/tasks", handler.GetTasks)
 
-	handler.GetTasks(c)
+	req := httptest.NewRequest("GET", "/tasks", nil)
+	router.ServeHTTP(w, req)
 
 	if w.Code != http.StatusOK {
 		t.Errorf("Expected status %d, got %d", http.StatusOK, w.Code)
@@ -33,27 +37,454 @@ func TestHandler_GetTasks(t *testing.T) {
 
 func TestHandler_CreateTask(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	
+
 	repo := repository.NewMockRepository()
 	svc := service.NewService(repo)
 	handler := NewHandler(svc)
 
-	req := task.CreateTaskRequest{
+	reqData := task.CreateTaskRequest{
 		Title:       "Test Task",
 		Description: "Test Description",
 		AssigneeID:  1,
 		TeamID:      1,
+		Tags:        []string{"test", "api"},
 	}
 
-	jsonData, _ := json.Marshal(req)
+	jsonData, _ := json.Marshal(reqData)
 	w := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(w)
-	c.Request = httptest.NewRequest("POST", "/tasks", bytes.NewBuffer(jsonData))
-	c.Request.Header.Set("Content-Type", "application/json")
+	router := gin.New()
+	router.Use(middleware.ErrorMiddleware())
+	router.Use(middleware.FormatterMiddleware())
+	router.POST("/tasks", handler.CreateTask)
 
-	handler.CreateTask(c)
+	req := httptest.NewRequest("POST", "/tasks", bytes.NewBuffer(jsonData))
+	req.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(w, req)
 
 	if w.Code != http.StatusCreated {
 		t.Errorf("Expected status %d, got %d", http.StatusCreated, w.Code)
+	}
+}
+
+func TestHandler_GetTask(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	repo := repository.NewMockRepository()
+	svc := service.NewService(repo)
+	handler := NewHandler(svc)
+
+	// Create a task first
+	repo.Create("Test Task", "Test Description", 1, 1, []string{"test"})
+
+	w := httptest.NewRecorder()
+	router := gin.New()
+	router.Use(middleware.ErrorMiddleware())
+	router.Use(middleware.FormatterMiddleware())
+	router.GET("/tasks/:id", handler.GetTask)
+
+	req := httptest.NewRequest("GET", "/tasks/1", nil)
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("Expected status %d, got %d", http.StatusOK, w.Code)
+	}
+}
+
+func TestHandler_GetTask_NotFound(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	repo := repository.NewMockRepository()
+	svc := service.NewService(repo)
+	handler := NewHandler(svc)
+
+	w := httptest.NewRecorder()
+	router := gin.New()
+	router.Use(middleware.ErrorMiddleware())
+	router.Use(middleware.FormatterMiddleware())
+	router.GET("/tasks/:id", handler.GetTask)
+
+	req := httptest.NewRequest("GET", "/tasks/999", nil)
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusNotFound {
+		t.Errorf("Expected status %d, got %d", http.StatusNotFound, w.Code)
+	}
+}
+
+func TestHandler_UpdateTask(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	repo := repository.NewMockRepository()
+	svc := service.NewService(repo)
+	handler := NewHandler(svc)
+
+	// Create a task first
+	repo.Create("Test Task", "Test Description", 1, 1, []string{"test"})
+
+	reqData := task.UpdateTaskRequest{
+		Title:       "Updated Task",
+		Description: "Updated Description",
+		Status:      "in_progress",
+	}
+
+	jsonData, _ := json.Marshal(reqData)
+	w := httptest.NewRecorder()
+	router := gin.New()
+	router.Use(middleware.ErrorMiddleware())
+	router.Use(middleware.FormatterMiddleware())
+	router.PUT("/tasks/:id", handler.UpdateTask)
+
+	req := httptest.NewRequest("PUT", "/tasks/1", bytes.NewBuffer(jsonData))
+	req.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("Expected status %d, got %d", http.StatusOK, w.Code)
+	}
+}
+
+func TestHandler_UpdateTask_InvalidStatus(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	repo := repository.NewMockRepository()
+	svc := service.NewService(repo)
+	handler := NewHandler(svc)
+
+	// Create a task first
+	repo.Create("Test Task", "Test Description", 1, 1, []string{"test"})
+
+	// Test different invalid statuses
+	invalidStatuses := []string{"invalid_status", "pending", "completed", "cancelled", ""}
+
+	for _, invalidStatus := range invalidStatuses {
+		reqData := task.UpdateTaskRequest{
+			Status: invalidStatus,
+		}
+
+		jsonData, _ := json.Marshal(reqData)
+		w := httptest.NewRecorder()
+		router := gin.New()
+		router.Use(middleware.ErrorMiddleware())
+		router.Use(middleware.FormatterMiddleware())
+		router.PUT("/tasks/:id", handler.UpdateTask)
+
+		req := httptest.NewRequest("PUT", "/tasks/1", bytes.NewBuffer(jsonData))
+		req.Header.Set("Content-Type", "application/json")
+		router.ServeHTTP(w, req)
+
+		if invalidStatus != "" && w.Code != http.StatusBadRequest {
+			t.Errorf("Expected status %d for invalid status '%s', got %d", http.StatusBadRequest, invalidStatus, w.Code)
+		}
+	}
+}
+
+func TestHandler_DeleteTask(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	repo := repository.NewMockRepository()
+	svc := service.NewService(repo)
+	handler := NewHandler(svc)
+
+	// Create a task first
+	repo.Create("Test Task", "Test Description", 1, 1, []string{"test"})
+
+	w := httptest.NewRecorder()
+	router := gin.New()
+	router.Use(middleware.ErrorMiddleware())
+	router.Use(middleware.FormatterMiddleware())
+	router.DELETE("/tasks/:id", handler.DeleteTask)
+
+	req := httptest.NewRequest("DELETE", "/tasks/1", nil)
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("Expected status %d, got %d", http.StatusOK, w.Code)
+	}
+}
+
+func TestHandler_DeleteTask_NotFound(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	repo := repository.NewMockRepository()
+	svc := service.NewService(repo)
+	handler := NewHandler(svc)
+
+	w := httptest.NewRecorder()
+	router := gin.New()
+	router.Use(middleware.ErrorMiddleware())
+	router.Use(middleware.FormatterMiddleware())
+	router.DELETE("/tasks/:id", handler.DeleteTask)
+
+	req := httptest.NewRequest("DELETE", "/tasks/999", nil)
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusNotFound {
+		t.Errorf("Expected status %d, got %d", http.StatusNotFound, w.Code)
+	}
+}
+
+func TestHandler_UpdateTaskStatus(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	repo := repository.NewMockRepository()
+	svc := service.NewService(repo)
+	handler := NewHandler(svc)
+
+	// Create a task first
+	repo.Create("Test Task", "Test Description", 1, 1, []string{"test"})
+
+	reqData := task.UpdateTaskStatusRequest{
+		Status: "in_progress",
+	}
+
+	jsonData, _ := json.Marshal(reqData)
+	w := httptest.NewRecorder()
+	router := gin.New()
+	router.Use(middleware.ErrorMiddleware())
+	router.Use(middleware.FormatterMiddleware())
+	router.PATCH("/tasks/:id/status", handler.UpdateTaskStatus)
+
+	req := httptest.NewRequest("PATCH", "/tasks/1/status", bytes.NewBuffer(jsonData))
+	req.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("Expected status %d, got %d", http.StatusOK, w.Code)
+	}
+}
+
+func TestHandler_UpdateTaskStatus_InvalidStatus(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	repo := repository.NewMockRepository()
+	svc := service.NewService(repo)
+	handler := NewHandler(svc)
+
+	// Create a task first
+	repo.Create("Test Task", "Test Description", 1, 1, []string{"test"})
+
+	reqData := task.UpdateTaskStatusRequest{
+		Status: "invalid_status",
+	}
+
+	jsonData, _ := json.Marshal(reqData)
+	w := httptest.NewRecorder()
+	router := gin.New()
+	router.Use(middleware.ErrorMiddleware())
+	router.Use(middleware.FormatterMiddleware())
+	router.PATCH("/tasks/:id/status", handler.UpdateTaskStatus)
+
+	req := httptest.NewRequest("PATCH", "/tasks/1/status", bytes.NewBuffer(jsonData))
+	req.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("Expected status %d, got %d", http.StatusBadRequest, w.Code)
+	}
+}
+
+func TestHandler_UpdateTaskStatus_NotFound(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	repo := repository.NewMockRepository()
+	svc := service.NewService(repo)
+	handler := NewHandler(svc)
+
+	reqData := task.UpdateTaskStatusRequest{
+		Status: "in_progress",
+	}
+
+	jsonData, _ := json.Marshal(reqData)
+	w := httptest.NewRecorder()
+	router := gin.New()
+	router.Use(middleware.ErrorMiddleware())
+	router.Use(middleware.FormatterMiddleware())
+	router.PATCH("/tasks/:id/status", handler.UpdateTaskStatus)
+
+	req := httptest.NewRequest("PATCH", "/tasks/999/status", bytes.NewBuffer(jsonData))
+	req.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusNotFound {
+		t.Errorf("Expected status %d, got %d", http.StatusNotFound, w.Code)
+	}
+}
+
+func TestHandler_AddComment(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	repo := repository.NewMockRepository()
+	svc := service.NewService(repo)
+	handler := NewHandler(svc)
+
+	// Create a task first
+	repo.Create("Test Task", "Test Description", 1, 1, []string{"test"})
+
+	reqData := task.AddCommentRequest{
+		Comment: "This is a test comment",
+	}
+
+	jsonData, _ := json.Marshal(reqData)
+	w := httptest.NewRecorder()
+	router := gin.New()
+	router.Use(middleware.ErrorMiddleware())
+	router.Use(middleware.FormatterMiddleware())
+	router.Use(func(c *gin.Context) {
+		c.Set("userID", 1)
+		c.Next()
+	})
+	router.POST("/tasks/:id/comments", handler.AddComment)
+
+	req := httptest.NewRequest("POST", "/tasks/1/comments", bytes.NewBuffer(jsonData))
+	req.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusCreated {
+		t.Errorf("Expected status %d, got %d", http.StatusCreated, w.Code)
+	}
+}
+
+func TestHandler_AddComment_TaskNotFound(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	repo := repository.NewMockRepository()
+	svc := service.NewService(repo)
+	handler := NewHandler(svc)
+
+	reqData := task.AddCommentRequest{
+		Comment: "This is a test comment",
+	}
+
+	jsonData, _ := json.Marshal(reqData)
+	w := httptest.NewRecorder()
+	router := gin.New()
+	router.Use(middleware.ErrorMiddleware())
+	router.Use(middleware.FormatterMiddleware())
+	router.Use(func(c *gin.Context) {
+		c.Set("userID", 1)
+		c.Next()
+	})
+	router.POST("/tasks/:id/comments", handler.AddComment)
+
+	req := httptest.NewRequest("POST", "/tasks/999/comments", bytes.NewBuffer(jsonData))
+	req.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusNotFound {
+		t.Errorf("Expected status %d, got %d", http.StatusNotFound, w.Code)
+	}
+}
+
+func TestHandler_AddComment_Unauthorized(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	repo := repository.NewMockRepository()
+	svc := service.NewService(repo)
+	handler := NewHandler(svc)
+
+	reqData := task.AddCommentRequest{
+		Comment: "This is a test comment",
+	}
+
+	jsonData, _ := json.Marshal(reqData)
+	w := httptest.NewRecorder()
+	router := gin.New()
+	router.Use(middleware.ErrorMiddleware())
+	router.Use(middleware.FormatterMiddleware())
+	router.POST("/tasks/:id/comments", handler.AddComment)
+
+	req := httptest.NewRequest("POST", "/tasks/1/comments", bytes.NewBuffer(jsonData))
+	req.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusUnauthorized {
+		t.Errorf("Expected status %d, got %d", http.StatusUnauthorized, w.Code)
+	}
+}
+
+func TestHandler_AddAssignment(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	repo := repository.NewMockRepository()
+	svc := service.NewService(repo)
+	handler := NewHandler(svc)
+
+	// Create a task first
+	repo.Create("Test Task", "Test Description", 1, 1, []string{"test"})
+
+	reqData := task.AddAssignmentRequest{
+		AssignType: "user",
+		AssignID:   5,
+	}
+
+	jsonData, _ := json.Marshal(reqData)
+	w := httptest.NewRecorder()
+	router := gin.New()
+	router.Use(middleware.ErrorMiddleware())
+	router.Use(middleware.FormatterMiddleware())
+	router.POST("/tasks/:id/assignments", handler.AddAssignment)
+
+	req := httptest.NewRequest("POST", "/tasks/1/assignments", bytes.NewBuffer(jsonData))
+	req.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusCreated {
+		t.Errorf("Expected status %d, got %d", http.StatusCreated, w.Code)
+	}
+}
+
+func TestHandler_AddAssignment_InvalidType(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	repo := repository.NewMockRepository()
+	svc := service.NewService(repo)
+	handler := NewHandler(svc)
+
+	// Create a task first
+	repo.Create("Test Task", "Test Description", 1, 1, []string{"test"})
+
+	reqData := task.AddAssignmentRequest{
+		AssignType: "invalid",
+		AssignID:   5,
+	}
+
+	jsonData, _ := json.Marshal(reqData)
+	w := httptest.NewRecorder()
+	router := gin.New()
+	router.Use(middleware.ErrorMiddleware())
+	router.Use(middleware.FormatterMiddleware())
+	router.POST("/tasks/:id/assignments", handler.AddAssignment)
+
+	req := httptest.NewRequest("POST", "/tasks/1/assignments", bytes.NewBuffer(jsonData))
+	req.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("Expected status %d, got %d", http.StatusBadRequest, w.Code)
+	}
+}
+
+func TestHandler_DeleteAssignment(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	repo := repository.NewMockRepository()
+	svc := service.NewService(repo)
+	handler := NewHandler(svc)
+
+	// Create a task and assignment first
+	repo.Create("Test Task", "Test Description", 1, 1, []string{"test"})
+	repo.AddAssignment(1, "user", 5, "2024-12-20T12:00:00Z")
+
+	w := httptest.NewRecorder()
+	router := gin.New()
+	router.Use(middleware.ErrorMiddleware())
+	router.Use(middleware.FormatterMiddleware())
+	router.DELETE("/tasks/:id/assignments/:assignmentId", handler.DeleteAssignment)
+
+	req := httptest.NewRequest("DELETE", "/tasks/1/assignments/1", nil)
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("Expected status %d, got %d", http.StatusOK, w.Code)
 	}
 }

@@ -4,5 +4,13 @@ import "ortak/internal/task"
 
 type Repository interface {
 	GetAll() []task.Task
-	Create(title, description string, assigneeID, teamID int) *task.Task
+	GetByID(id string) *task.Task
+	GetByIDWithComments(id string) *task.Task
+	Create(title, description string, assigneeID, teamID int, tags []string) *task.Task
+	Update(id, title, description, status string, assigneeID int, tags []string) *task.Task
+	UpdateStatus(id, status string) *task.Task
+	Delete(id string) error
+	AddComment(taskID, userID int, comment, createdAt string) *task.TaskComment
+	AddAssignment(taskID int, assignType string, assignID int, createdAt string) *task.TaskAssignment
+	DeleteAssignment(assignmentID int) error
 }

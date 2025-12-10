@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"ortak/internal/middleware"
 	"ortak/internal/team"
 	"ortak/internal/team/repository"
 	"ortak/internal/team/service"
@@ -21,10 +22,13 @@ func TestHandler_GetTeams(t *testing.T) {
 	handler := NewHandler(svc)
 
 	w := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(w)
-	c.Request = httptest.NewRequest("GET", "/teams", nil)
+	router := gin.New()
+	router.Use(middleware.ErrorMiddleware())
+	router.Use(middleware.FormatterMiddleware())
+	router.GET("/teams", handler.GetTeams)
 
-	handler.GetTeams(c)
+	req := httptest.NewRequest("GET", "/teams", nil)
+	router.ServeHTTP(w, req)
 
 	if w.Code != http.StatusOK {
 		t.Errorf("Expected status %d, got %d", http.StatusOK, w.Code)
@@ -38,21 +42,342 @@ func TestHandler_CreateTeam(t *testing.T) {
 	svc := service.NewService(repo)
 	handler := NewHandler(svc)
 
-	req := team.CreateTeamRequest{
+	reqData := team.CreateTeamRequest{
 		Name:        "Test Team",
 		Description: "Test Description",
 	}
 
-	jsonData, _ := json.Marshal(req)
+	jsonData, _ := json.Marshal(reqData)
 	w := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(w)
-	c.Request = httptest.NewRequest("POST", "/teams", bytes.NewBuffer(jsonData))
-	c.Request.Header.Set("Content-Type", "application/json")
-	c.Set("user_id", 1)
+	router := gin.New()
+	router.Use(middleware.ErrorMiddleware())
+	router.Use(middleware.FormatterMiddleware())
+	router.POST("/teams", func(c *gin.Context) {
+		c.Set("user_id", 1)
+		handler.CreateTeam(c)
+	})
 
-	handler.CreateTeam(c)
+	req := httptest.NewRequest("POST", "/teams", bytes.NewBuffer(jsonData))
+	req.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(w, req)
 
 	if w.Code != http.StatusCreated {
 		t.Errorf("Expected status %d, got %d", http.StatusCreated, w.Code)
+	}
+
+	// Verify owner was automatically added as member
+	members := repo.GetTeamMembers("1")
+	if len(members) != 1 {
+		t.Errorf("Expected 1 member (owner), got %d", len(members))
+	}
+	if len(members) > 0 && members[0].Role != "owner" {
+		t.Errorf("Expected owner role, got %s", members[0].Role)
+	}
+}
+
+func TestHandler_GetTeam(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	
+	repo := repository.NewMockRepository()
+	svc := service.NewService(repo)
+	handler := NewHandler(svc)
+
+	// Create a team and add a member
+	repo.Create("Test Team", "Test Description", 1)
+	repo.AddMember("1", 2, "developer")
+
+	w := httptest.NewRecorder()
+	router := gin.New()
+	router.Use(middleware.ErrorMiddleware())
+	router.Use(middleware.FormatterMiddleware())
+	router.GET("/teams/:id", handler.GetTeam)
+
+	req := httptest.NewRequest("GET", "/teams/1", nil)
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("Expected status %d, got %d", http.StatusOK, w.Code)
+	}
+
+	// Verify response contains team with members
+	var response map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &response)
+	data := response["data"].(map[string]interface{})
+	members := data["members"].([]interface{})
+	
+	if len(members) != 1 {
+		t.Errorf("Expected 1 member, got %d", len(members))
+	}
+}
+
+func TestHandler_GetTeam_NotFound(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	
+	repo := repository.NewMockRepository()
+	svc := service.NewService(repo)
+	handler := NewHandler(svc)
+
+	w := httptest.NewRecorder()
+	router := gin.New()
+	router.Use(middleware.ErrorMiddleware())
+	router.Use(middleware.FormatterMiddleware())
+	router.GET("/teams/:id", handler.GetTeam)
+
+	req := httptest.NewRequest("GET", "/teams/999", nil)
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusNotFound {
+		t.Errorf("Expected status %d, got %d", http.StatusNotFound, w.Code)
+	}
+}
+
+func TestHandler_UpdateTeam(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	
+	repo := repository.NewMockRepository()
+	svc := service.NewService(repo)
+	handler := NewHandler(svc)
+
+	// Create a team first
+	repo.Create("Test Team", "Test Description", 1)
+
+	reqData := team.UpdateTeamRequest{
+		Name:        "Updated Team",
+		Description: "Updated Description",
+	}
+
+	jsonData, _ := json.Marshal(reqData)
+	w := httptest.NewRecorder()
+	router := gin.New()
+	router.Use(middleware.ErrorMiddleware())
+	router.Use(middleware.FormatterMiddleware())
+	router.PUT("/teams/:id", func(c *gin.Context) {
+		c.Set("user_id", 1)
+		handler.UpdateTeam(c)
+	})
+
+	req := httptest.NewRequest("PUT", "/teams/1", bytes.NewBuffer(jsonData))
+	req.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("Expected status %d, got %d", http.StatusOK, w.Code)
+	}
+}
+
+func TestHandler_UpdateTeam_NotOwner(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	
+	repo := repository.NewMockRepository()
+	svc := service.NewService(repo)
+	handler := NewHandler(svc)
+
+	// Create a team with owner ID 1
+	repo.Create("Test Team", "Test Description", 1)
+
+	reqData := team.UpdateTeamRequest{
+		Name: "Updated Team",
+	}
+
+	jsonData, _ := json.Marshal(reqData)
+	w := httptest.NewRecorder()
+	router := gin.New()
+	router.Use(middleware.ErrorMiddleware())
+	router.Use(middleware.FormatterMiddleware())
+	router.PUT("/teams/:id", func(c *gin.Context) {
+		c.Set("user_id", 2) // Different user
+		handler.UpdateTeam(c)
+	})
+
+	req := httptest.NewRequest("PUT", "/teams/1", bytes.NewBuffer(jsonData))
+	req.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusForbidden {
+		t.Errorf("Expected status %d, got %d", http.StatusForbidden, w.Code)
+	}
+}
+
+func TestHandler_DeleteTeam(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	
+	repo := repository.NewMockRepository()
+	svc := service.NewService(repo)
+	handler := NewHandler(svc)
+
+	// Create a team first
+	repo.Create("Test Team", "Test Description", 1)
+
+	w := httptest.NewRecorder()
+	router := gin.New()
+	router.Use(middleware.ErrorMiddleware())
+	router.Use(middleware.FormatterMiddleware())
+	router.DELETE("/teams/:id", func(c *gin.Context) {
+		c.Set("user_id", 1)
+		handler.DeleteTeam(c)
+	})
+
+	req := httptest.NewRequest("DELETE", "/teams/1", nil)
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("Expected status %d, got %d", http.StatusOK, w.Code)
+	}
+}
+
+func TestHandler_DeleteTeam_NotOwner(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	
+	repo := repository.NewMockRepository()
+	svc := service.NewService(repo)
+	handler := NewHandler(svc)
+
+	// Create a team with owner ID 1
+	repo.Create("Test Team", "Test Description", 1)
+
+	w := httptest.NewRecorder()
+	router := gin.New()
+	router.Use(middleware.ErrorMiddleware())
+	router.Use(middleware.FormatterMiddleware())
+	router.DELETE("/teams/:id", func(c *gin.Context) {
+		c.Set("user_id", 2) // Different user
+		handler.DeleteTeam(c)
+	})
+
+	req := httptest.NewRequest("DELETE", "/teams/1", nil)
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusForbidden {
+		t.Errorf("Expected status %d, got %d", http.StatusForbidden, w.Code)
+	}
+}
+
+func TestHandler_AddTeamMember(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	
+	repo := repository.NewMockRepository()
+	svc := service.NewService(repo)
+	handler := NewHandler(svc)
+
+	// Create a team first
+	repo.Create("Test Team", "Test Description", 1)
+
+	reqData := team.AddMemberRequest{
+		UserID: 2,
+		Role:   "developer",
+	}
+
+	jsonData, _ := json.Marshal(reqData)
+	w := httptest.NewRecorder()
+	router := gin.New()
+	router.Use(middleware.ErrorMiddleware())
+	router.Use(middleware.FormatterMiddleware())
+	router.POST("/teams/:id/members", func(c *gin.Context) {
+		c.Set("user_id", 1) // Team owner
+		handler.AddTeamMember(c)
+	})
+
+	req := httptest.NewRequest("POST", "/teams/1/members", bytes.NewBuffer(jsonData))
+	req.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusCreated {
+		t.Errorf("Expected status %d, got %d", http.StatusCreated, w.Code)
+	}
+}
+
+func TestHandler_AddTeamMember_NotOwner(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	
+	repo := repository.NewMockRepository()
+	svc := service.NewService(repo)
+	handler := NewHandler(svc)
+
+	// Create a team with owner ID 1
+	repo.Create("Test Team", "Test Description", 1)
+
+	reqData := team.AddMemberRequest{
+		UserID: 2,
+		Role:   "developer",
+	}
+
+	jsonData, _ := json.Marshal(reqData)
+	w := httptest.NewRecorder()
+	router := gin.New()
+	router.Use(middleware.ErrorMiddleware())
+	router.Use(middleware.FormatterMiddleware())
+	router.POST("/teams/:id/members", func(c *gin.Context) {
+		c.Set("user_id", 2) // Different user
+		handler.AddTeamMember(c)
+	})
+
+	req := httptest.NewRequest("POST", "/teams/1/members", bytes.NewBuffer(jsonData))
+	req.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusForbidden {
+		t.Errorf("Expected status %d, got %d", http.StatusForbidden, w.Code)
+	}
+}
+
+func TestHandler_RemoveTeamMember(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	
+	repo := repository.NewMockRepository()
+	svc := service.NewService(repo)
+	handler := NewHandler(svc)
+
+	// Create a team and add a member
+	repo.Create("Test Team", "Test Description", 1)
+	repo.AddMember("1", 2, "developer")
+
+	w := httptest.NewRecorder()
+	router := gin.New()
+	router.Use(middleware.ErrorMiddleware())
+	router.Use(middleware.FormatterMiddleware())
+	router.DELETE("/teams/:id/members/:userId", func(c *gin.Context) {
+		c.Set("user_id", 1) // Team owner
+		handler.RemoveTeamMember(c)
+	})
+
+	req := httptest.NewRequest("DELETE", "/teams/1/members/2", nil)
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("Expected status %d, got %d", http.StatusOK, w.Code)
+	}
+}
+
+func TestHandler_UpdateMemberRole(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	
+	repo := repository.NewMockRepository()
+	svc := service.NewService(repo)
+	handler := NewHandler(svc)
+
+	// Create a team and add a member
+	repo.Create("Test Team", "Test Description", 1)
+	repo.AddMember("1", 2, "developer")
+
+	reqData := team.UpdateMemberRoleRequest{
+		Role: "admin",
+	}
+
+	jsonData, _ := json.Marshal(reqData)
+	w := httptest.NewRecorder()
+	router := gin.New()
+	router.Use(middleware.ErrorMiddleware())
+	router.Use(middleware.FormatterMiddleware())
+	router.PUT("/teams/:id/members/:userId/role", func(c *gin.Context) {
+		c.Set("user_id", 1) // Team owner
+		handler.UpdateMemberRole(c)
+	})
+
+	req := httptest.NewRequest("PUT", "/teams/1/members/2/role", bytes.NewBuffer(jsonData))
+	req.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("Expected status %d, got %d", http.StatusOK, w.Code)
 	}
 }
