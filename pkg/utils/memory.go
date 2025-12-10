@@ -44,20 +44,30 @@ type TaskComment struct {
 	CreatedAt string `json:"created_at"`
 }
 
+type TaskAssignment struct {
+	ID         int    `json:"id"`
+	TaskID     int    `json:"task_id"`
+	AssignType string `json:"assign_type"`
+	AssignID   int    `json:"assign_id"`
+	CreatedAt  string `json:"created_at"`
+}
+
 type MemoryStorage struct {
-	users        map[int]*User
-	teams        map[int]*Team
-	tasks        map[int]*Task
-	members      map[int]*TeamMember
-	comments     map[int]*TaskComment
-	tokens       map[string]int
-	userEmails   map[string]int
-	nextUserID   int
-	nextTeamID   int
-	nextTaskID   int
-	nextMemberID int
-	nextCommentID int
-	mu           sync.RWMutex
+	users           map[int]*User
+	teams           map[int]*Team
+	tasks           map[int]*Task
+	members         map[int]*TeamMember
+	comments        map[int]*TaskComment
+	assignments     map[int]*TaskAssignment
+	tokens          map[string]int
+	userEmails      map[string]int
+	nextUserID      int
+	nextTeamID      int
+	nextTaskID      int
+	nextMemberID    int
+	nextCommentID   int
+	nextAssignmentID int
+	mu              sync.RWMutex
 }
 
 var instance *MemoryStorage
@@ -66,18 +76,20 @@ var once sync.Once
 func GetMemoryStorage() *MemoryStorage {
 	once.Do(func() {
 		instance = &MemoryStorage{
-			users:         make(map[int]*User),
-			teams:         make(map[int]*Team),
-			tasks:         make(map[int]*Task),
-			members:       make(map[int]*TeamMember),
-			comments:      make(map[int]*TaskComment),
-			tokens:        make(map[string]int),
-			userEmails:    make(map[string]int),
-			nextUserID:    1,
-			nextTeamID:    1,
-			nextTaskID:    1,
-			nextMemberID:  1,
-			nextCommentID: 1,
+			users:            make(map[int]*User),
+			teams:            make(map[int]*Team),
+			tasks:            make(map[int]*Task),
+			members:          make(map[int]*TeamMember),
+			comments:         make(map[int]*TaskComment),
+			assignments:      make(map[int]*TaskAssignment),
+			tokens:           make(map[string]int),
+			userEmails:       make(map[string]int),
+			nextUserID:       1,
+			nextTeamID:       1,
+			nextTaskID:       1,
+			nextMemberID:     1,
+			nextCommentID:    1,
+			nextAssignmentID: 1,
 		}
 	})
 	return instance
@@ -565,4 +577,45 @@ func (s *MemoryStorage) GetTaskCommentCount(taskID int) int {
 		}
 	}
 	return count
+}
+
+// Task Assignment Methods
+func (s *MemoryStorage) AddTaskAssignment(taskID int, assignType string, assignID int, createdAt string) *TaskAssignment {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	assignment := &TaskAssignment{
+		ID:         s.nextAssignmentID,
+		TaskID:     taskID,
+		AssignType: assignType,
+		AssignID:   assignID,
+		CreatedAt:  createdAt,
+	}
+	s.assignments[s.nextAssignmentID] = assignment
+	s.nextAssignmentID++
+	return assignment
+}
+
+func (s *MemoryStorage) GetTaskAssignments(taskID int) []*TaskAssignment {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	assignments := make([]*TaskAssignment, 0)
+	for _, assignment := range s.assignments {
+		if assignment.TaskID == taskID {
+			assignments = append(assignments, assignment)
+		}
+	}
+	return assignments
+}
+
+func (s *MemoryStorage) DeleteTaskAssignment(assignmentID int) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if _, exists := s.assignments[assignmentID]; !exists {
+		return fmt.Errorf("assignment not found")
+	}
+	delete(s.assignments, assignmentID)
+	return nil
 }

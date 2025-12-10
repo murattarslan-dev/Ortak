@@ -11,4 +11,6 @@ type Repository interface {
 	UpdateStatus(id, status string) *task.Task
 	Delete(id string) error
 	AddComment(taskID, userID int, comment, createdAt string) *task.TaskComment
+	AddAssignment(taskID int, assignType string, assignID int, createdAt string) *task.TaskAssignment
+	DeleteAssignment(assignmentID int) error
 }

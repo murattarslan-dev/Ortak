@@ -98,6 +98,34 @@ func (s *Service) AddComment(taskID string, userID int, req task.AddCommentReque
 	return s.repo.AddComment(taskIDInt, userID, req.Comment, createdAt), nil
 }
 
+func (s *Service) AddAssignment(taskID string, req task.AddAssignmentRequest) (*task.TaskAssignment, error) {
+	existingTask := s.repo.GetByID(taskID)
+	if existingTask == nil {
+		return nil, fmt.Errorf("task not found")
+	}
+
+	// Validate assign_type
+	if req.AssignType != "user" && req.AssignType != "team" {
+		return nil, fmt.Errorf("invalid assign_type: must be user or team")
+	}
+
+	// Convert taskID to int
+	taskIDInt := 0
+	for i := 1; i <= 1000; i++ {
+		if fmt.Sprintf("%d", i) == taskID {
+			taskIDInt = i
+			break
+		}
+	}
+
+	createdAt := time.Now().Format(time.RFC3339)
+	return s.repo.AddAssignment(taskIDInt, req.AssignType, req.AssignID, createdAt), nil
+}
+
+func (s *Service) DeleteAssignment(assignmentID int) error {
+	return s.repo.DeleteAssignment(assignmentID)
+}
+
 func (s *Service) DeleteTask(id string) error {
 	existingTask := s.repo.GetByID(id)
 	if existingTask == nil {

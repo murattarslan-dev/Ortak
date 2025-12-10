@@ -401,3 +401,90 @@ func TestHandler_AddComment_Unauthorized(t *testing.T) {
 		t.Errorf("Expected status %d, got %d", http.StatusUnauthorized, w.Code)
 	}
 }
+
+func TestHandler_AddAssignment(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	repo := repository.NewMockRepository()
+	svc := service.NewService(repo)
+	handler := NewHandler(svc)
+
+	// Create a task first
+	repo.Create("Test Task", "Test Description", 1, 1, []string{"test"})
+
+	reqData := task.AddAssignmentRequest{
+		AssignType: "user",
+		AssignID:   5,
+	}
+
+	jsonData, _ := json.Marshal(reqData)
+	w := httptest.NewRecorder()
+	router := gin.New()
+	router.Use(middleware.ErrorMiddleware())
+	router.Use(middleware.FormatterMiddleware())
+	router.POST("/tasks/:id/assignments", handler.AddAssignment)
+
+	req := httptest.NewRequest("POST", "/tasks/1/assignments", bytes.NewBuffer(jsonData))
+	req.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusCreated {
+		t.Errorf("Expected status %d, got %d", http.StatusCreated, w.Code)
+	}
+}
+
+func TestHandler_AddAssignment_InvalidType(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	repo := repository.NewMockRepository()
+	svc := service.NewService(repo)
+	handler := NewHandler(svc)
+
+	// Create a task first
+	repo.Create("Test Task", "Test Description", 1, 1, []string{"test"})
+
+	reqData := task.AddAssignmentRequest{
+		AssignType: "invalid",
+		AssignID:   5,
+	}
+
+	jsonData, _ := json.Marshal(reqData)
+	w := httptest.NewRecorder()
+	router := gin.New()
+	router.Use(middleware.ErrorMiddleware())
+	router.Use(middleware.FormatterMiddleware())
+	router.POST("/tasks/:id/assignments", handler.AddAssignment)
+
+	req := httptest.NewRequest("POST", "/tasks/1/assignments", bytes.NewBuffer(jsonData))
+	req.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("Expected status %d, got %d", http.StatusBadRequest, w.Code)
+	}
+}
+
+func TestHandler_DeleteAssignment(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	repo := repository.NewMockRepository()
+	svc := service.NewService(repo)
+	handler := NewHandler(svc)
+
+	// Create a task and assignment first
+	repo.Create("Test Task", "Test Description", 1, 1, []string{"test"})
+	repo.AddAssignment(1, "user", 5, "2024-12-20T12:00:00Z")
+
+	w := httptest.NewRecorder()
+	router := gin.New()
+	router.Use(middleware.ErrorMiddleware())
+	router.Use(middleware.FormatterMiddleware())
+	router.DELETE("/tasks/:id/assignments/:assignmentId", handler.DeleteAssignment)
+
+	req := httptest.NewRequest("DELETE", "/tasks/1/assignments/1", nil)
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("Expected status %d, got %d", http.StatusOK, w.Code)
+	}
+}

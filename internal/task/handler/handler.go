@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"fmt"
 	"ortak/internal/task"
 	"ortak/internal/task/service"
 	"ortak/pkg/response"
@@ -124,6 +125,48 @@ func (h *Handler) AddComment(c *gin.Context) {
 	}
 
 	response.SetCreated(c, "Comment added successfully", comment)
+}
+
+func (h *Handler) AddAssignment(c *gin.Context) {
+	taskID := c.Param("id")
+	var req task.AddAssignmentRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.SetError(c, 400, "Invalid request format: "+err.Error())
+		return
+	}
+
+	assignment, err := h.service.AddAssignment(taskID, req)
+	if err != nil {
+		if err.Error() == "task not found" {
+			response.SetError(c, 404, "Task not found")
+		} else if err.Error() == "invalid assign_type: must be user or team" {
+			response.SetError(c, 400, "Invalid assign_type: must be user or team")
+		} else {
+			response.SetError(c, 500, "Failed to add assignment")
+		}
+		return
+	}
+
+	response.SetCreated(c, "Assignment added successfully", assignment)
+}
+
+func (h *Handler) DeleteAssignment(c *gin.Context) {
+	assignmentID := c.Param("assignmentId")
+	id := 0
+	for i := 1; i <= 1000; i++ {
+		if fmt.Sprintf("%d", i) == assignmentID {
+			id = i
+			break
+		}
+	}
+
+	err := h.service.DeleteAssignment(id)
+	if err != nil {
+		response.SetError(c, 404, "Assignment not found")
+		return
+	}
+
+	response.SetSuccess(c, "Assignment deleted successfully", nil)
 }
 
 func (h *Handler) DeleteTask(c *gin.Context) {

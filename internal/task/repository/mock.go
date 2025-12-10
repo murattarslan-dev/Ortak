@@ -6,14 +6,16 @@ import (
 )
 
 type MockRepository struct {
-	tasks    []task.Task
-	comments []task.TaskComment
+	tasks       []task.Task
+	comments    []task.TaskComment
+	assignments []task.TaskAssignment
 }
 
 func NewMockRepository() Repository {
 	return &MockRepository{
-		tasks:    make([]task.Task, 0),
-		comments: make([]task.TaskComment, 0),
+		tasks:       make([]task.Task, 0),
+		comments:    make([]task.TaskComment, 0),
+		assignments: make([]task.TaskAssignment, 0),
 	}
 }
 
@@ -72,8 +74,15 @@ func (m *MockRepository) GetByIDWithComments(id string) *task.Task {
 					comments = append(comments, c)
 				}
 			}
+			assignments := make([]task.TaskAssignment, 0)
+			for _, a := range m.assignments {
+				if a.TaskID == t.ID {
+					assignments = append(assignments, a)
+				}
+			}
 			t.Comments = comments
 			t.CommentCount = len(comments)
+			t.Assignments = assignments
 			return &t
 		}
 	}
@@ -130,6 +139,42 @@ func (m *MockRepository) AddComment(taskID, userID int, comment, createdAt strin
 	}
 	m.comments = append(m.comments, *commentObj)
 	return commentObj
+}
+
+func (m *MockRepository) AddAssignment(taskID int, assignType string, assignID int, createdAt string) *task.TaskAssignment {
+	assignment := &task.TaskAssignment{
+		ID:         len(m.assignments) + 1,
+		TaskID:     taskID,
+		AssignType: assignType,
+		AssignID:   assignID,
+		CreatedAt:  createdAt,
+	}
+
+	if assignType == "user" {
+		assignment.User = &task.CommentUser{
+			ID:       assignID,
+			Username: fmt.Sprintf("user%d", assignID),
+			Email:    fmt.Sprintf("user%d@test.com", assignID),
+		}
+	} else if assignType == "team" {
+		assignment.Team = &task.AssignTeam{
+			ID:   assignID,
+			Name: fmt.Sprintf("Team %d", assignID),
+		}
+	}
+
+	m.assignments = append(m.assignments, *assignment)
+	return assignment
+}
+
+func (m *MockRepository) DeleteAssignment(assignmentID int) error {
+	for i, a := range m.assignments {
+		if a.ID == assignmentID {
+			m.assignments = append(m.assignments[:i], m.assignments[i+1:]...)
+			return nil
+		}
+	}
+	return fmt.Errorf("assignment not found")
 }
 
 func (m *MockRepository) Delete(id string) error {

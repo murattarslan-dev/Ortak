@@ -139,3 +139,69 @@ func TestService_AddComment(t *testing.T) {
 		t.Error("Expected error for non-existent task, got nil")
 	}
 }
+
+func TestService_AddAssignment(t *testing.T) {
+	repo := repository.NewMockRepository()
+	service := NewService(repo)
+
+	// Create a task first
+	createReq := task.CreateTaskRequest{
+		Title:       "Test Task",
+		Description: "Test Description",
+		AssigneeID:  1,
+		TeamID:      1,
+		Tags:        []string{"test"},
+	}
+	service.CreateTask(createReq)
+
+	// Test user assignment
+	userAssignReq := task.AddAssignmentRequest{
+		AssignType: "user",
+		AssignID:   5,
+	}
+
+	assignment, err := service.AddAssignment("1", userAssignReq)
+	if err != nil {
+		t.Errorf("Expected no error, got %v", err)
+	}
+
+	if assignment.AssignType != "user" {
+		t.Errorf("Expected assign_type 'user', got %s", assignment.AssignType)
+	}
+
+	if assignment.AssignID != 5 {
+		t.Errorf("Expected assign_id 5, got %d", assignment.AssignID)
+	}
+
+	// Test team assignment
+	teamAssignReq := task.AddAssignmentRequest{
+		AssignType: "team",
+		AssignID:   2,
+	}
+
+	teamAssignment, err := service.AddAssignment("1", teamAssignReq)
+	if err != nil {
+		t.Errorf("Expected no error, got %v", err)
+	}
+
+	if teamAssignment.AssignType != "team" {
+		t.Errorf("Expected assign_type 'team', got %s", teamAssignment.AssignType)
+	}
+
+	// Test invalid assign_type
+	invalidReq := task.AddAssignmentRequest{
+		AssignType: "invalid",
+		AssignID:   1,
+	}
+
+	_, err = service.AddAssignment("1", invalidReq)
+	if err == nil {
+		t.Error("Expected error for invalid assign_type, got nil")
+	}
+
+	// Test non-existent task
+	_, err = service.AddAssignment("999", userAssignReq)
+	if err == nil {
+		t.Error("Expected error for non-existent task, got nil")
+	}
+}

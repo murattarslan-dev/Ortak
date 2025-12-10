@@ -100,6 +100,8 @@ func main() {
 			protected.PUT("/tasks/:id", taskHandler.UpdateTask)
 			protected.PUT("/tasks/:id/status", taskHandler.UpdateTaskStatus)
 			protected.POST("/tasks/:id/comments", taskHandler.AddComment)
+			protected.POST("/tasks/:id/assignments", taskHandler.AddAssignment)
+			protected.DELETE("/tasks/:id/assignments/:assignmentId", taskHandler.DeleteAssignment)
 			protected.DELETE("/tasks/:id", taskHandler.DeleteTask)
 		}
 	}
