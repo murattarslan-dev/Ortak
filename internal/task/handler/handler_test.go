@@ -10,6 +10,7 @@ import (
 	"ortak/internal/task/repository"
 	"ortak/internal/task/service"
 	"testing"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -45,8 +46,8 @@ func TestHandler_CreateTask(t *testing.T) {
 	reqData := task.CreateTaskRequest{
 		Title:       "Test Task",
 		Description: "Test Description",
-		AssigneeID:  1,
-		TeamID:      1,
+		Priority:    "high",
+		DueDate:     &time.Time{},
 		Tags:        []string{"test", "api"},
 	}
 
@@ -74,7 +75,7 @@ func TestHandler_GetTask(t *testing.T) {
 	handler := NewHandler(svc)
 
 	// Create a task first
-	repo.Create("Test Task", "Test Description", 1, 1, []string{"test"})
+	repo.Create("Test Task", "Test Description", "1", []string{"test"}, "high", &time.Time{})
 
 	w := httptest.NewRecorder()
 	router := gin.New()
@@ -119,7 +120,7 @@ func TestHandler_UpdateTask(t *testing.T) {
 	handler := NewHandler(svc)
 
 	// Create a task first
-	repo.Create("Test Task", "Test Description", 1, 1, []string{"test"})
+	repo.Create("Test Task", "Test Description", "1", []string{"test"}, "high", &time.Time{})
 
 	reqData := task.UpdateTaskRequest{
 		Title:       "Updated Task",
@@ -151,7 +152,7 @@ func TestHandler_UpdateTask_InvalidStatus(t *testing.T) {
 	handler := NewHandler(svc)
 
 	// Create a task first
-	repo.Create("Test Task", "Test Description", 1, 1, []string{"test"})
+	repo.Create("Test Task", "Test Description", "1", []string{"test"}, "high", &time.Time{})
 
 	// Test different invalid statuses
 	invalidStatuses := []string{"invalid_status", "pending", "completed", "cancelled", ""}
@@ -186,7 +187,7 @@ func TestHandler_DeleteTask(t *testing.T) {
 	handler := NewHandler(svc)
 
 	// Create a task first
-	repo.Create("Test Task", "Test Description", 1, 1, []string{"test"})
+	repo.Create("Test Task", "Test Description", "1", []string{"test"}, "high", &time.Time{})
 
 	w := httptest.NewRecorder()
 	router := gin.New()
@@ -231,7 +232,7 @@ func TestHandler_UpdateTaskStatus(t *testing.T) {
 	handler := NewHandler(svc)
 
 	// Create a task first
-	repo.Create("Test Task", "Test Description", 1, 1, []string{"test"})
+	repo.Create("Test Task", "Test Description", "1", []string{"test"}, "high", &time.Time{})
 
 	reqData := task.UpdateTaskStatusRequest{
 		Status: "in_progress",
@@ -261,7 +262,7 @@ func TestHandler_UpdateTaskStatus_InvalidStatus(t *testing.T) {
 	handler := NewHandler(svc)
 
 	// Create a task first
-	repo.Create("Test Task", "Test Description", 1, 1, []string{"test"})
+	repo.Create("Test Task", "Test Description", "1", []string{"test"}, "high", &time.Time{})
 
 	reqData := task.UpdateTaskStatusRequest{
 		Status: "invalid_status",
@@ -318,7 +319,7 @@ func TestHandler_AddComment(t *testing.T) {
 	handler := NewHandler(svc)
 
 	// Create a task first
-	repo.Create("Test Task", "Test Description", 1, 1, []string{"test"})
+	repo.Create("Test Task", "Test Description", "1", []string{"test"}, "high", &time.Time{})
 
 	reqData := task.AddCommentRequest{
 		Comment: "This is a test comment",
@@ -410,11 +411,11 @@ func TestHandler_AddAssignment(t *testing.T) {
 	handler := NewHandler(svc)
 
 	// Create a task first
-	repo.Create("Test Task", "Test Description", 1, 1, []string{"test"})
+	repo.Create("Test Task", "Test Description", "1", []string{"test"}, "high", &time.Time{})
 
 	reqData := task.AddAssignmentRequest{
 		AssignType: "user",
-		AssignID:   5,
+		AssignID:   "5",
 	}
 
 	jsonData, _ := json.Marshal(reqData)
@@ -441,11 +442,11 @@ func TestHandler_AddAssignment_InvalidType(t *testing.T) {
 	handler := NewHandler(svc)
 
 	// Create a task first
-	repo.Create("Test Task", "Test Description", 1, 1, []string{"test"})
+	repo.Create("Test Task", "Test Description", "1", []string{"test"}, "high", &time.Time{})
 
 	reqData := task.AddAssignmentRequest{
 		AssignType: "invalid",
-		AssignID:   5,
+		AssignID:   "5",
 	}
 
 	jsonData, _ := json.Marshal(reqData)
@@ -472,8 +473,8 @@ func TestHandler_DeleteAssignment(t *testing.T) {
 	handler := NewHandler(svc)
 
 	// Create a task and assignment first
-	repo.Create("Test Task", "Test Description", 1, 1, []string{"test"})
-	repo.AddAssignment(1, "user", 5, "2024-12-20T12:00:00Z")
+	repo.Create("Test Task", "Test Description", "1", []string{"test"}, "high", &time.Time{})
+	repo.AddAssignment("1", "user", "5")
 
 	w := httptest.NewRecorder()
 	router := gin.New()

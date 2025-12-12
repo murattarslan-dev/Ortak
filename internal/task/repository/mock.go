@@ -3,6 +3,9 @@ package repository
 import (
 	"fmt"
 	"ortak/internal/task"
+	"ortak/internal/team"
+	"ortak/internal/user"
+	"time"
 )
 
 type MockRepository struct {
@@ -29,7 +32,7 @@ func (m *MockRepository) GetAll() []task.Task {
 	return tasks
 }
 
-func (m *MockRepository) getCommentCount(taskID int) int {
+func (m *MockRepository) getCommentCount(taskID string) int {
 	count := 0
 	for _, c := range m.comments {
 		if c.TaskID == taskID {
@@ -39,15 +42,18 @@ func (m *MockRepository) getCommentCount(taskID int) int {
 	return count
 }
 
-func (m *MockRepository) Create(title, description string, assigneeID, teamID int, tags []string) *task.Task {
+func (m *MockRepository) Create(title, description, createdBy string, tags []string, priority string, dueDate *time.Time) *task.Task {
 	task := &task.Task{
-		ID:           len(m.tasks) + 1,
+		ID:           "1",
 		Title:        title,
 		Description:  description,
 		Status:       "todo",
-		AssigneeID:   assigneeID,
-		TeamID:       teamID,
 		Tags:         tags,
+		Priority:     priority,
+		DueDate:      dueDate,
+		CreatedBy:    createdBy,
+		CreatedAt:    time.Now(),
+		UpdatedAt:    time.Now(),
 		CommentCount: 0,
 	}
 	m.tasks = append(m.tasks, *task)
@@ -56,7 +62,7 @@ func (m *MockRepository) Create(title, description string, assigneeID, teamID in
 
 func (m *MockRepository) GetByID(id string) *task.Task {
 	for _, t := range m.tasks {
-		if fmt.Sprintf("%d", t.ID) == id {
+		if t.ID == id {
 			commentCount := m.getCommentCount(t.ID)
 			t.CommentCount = commentCount
 			return &t
@@ -67,7 +73,7 @@ func (m *MockRepository) GetByID(id string) *task.Task {
 
 func (m *MockRepository) GetByIDWithComments(id string) *task.Task {
 	for _, t := range m.tasks {
-		if fmt.Sprintf("%d", t.ID) == id {
+		if t.ID == id {
 			comments := make([]task.TaskComment, 0)
 			for _, c := range m.comments {
 				if c.TaskID == t.ID {
@@ -89,9 +95,9 @@ func (m *MockRepository) GetByIDWithComments(id string) *task.Task {
 	return nil
 }
 
-func (m *MockRepository) Update(id, title, description, status string, assigneeID int, tags []string) *task.Task {
+func (m *MockRepository) Update(id, title, description, status string, tags []string, priority string, dueDate *time.Time) *task.Task {
 	for i, t := range m.tasks {
-		if fmt.Sprintf("%d", t.ID) == id {
+		if t.ID == id {
 			if title != "" {
 				m.tasks[i].Title = title
 			}
@@ -101,12 +107,16 @@ func (m *MockRepository) Update(id, title, description, status string, assigneeI
 			if status != "" {
 				m.tasks[i].Status = status
 			}
-			if assigneeID != 0 {
-				m.tasks[i].AssigneeID = assigneeID
-			}
 			if len(tags) > 0 {
 				m.tasks[i].Tags = tags
 			}
+			if priority != "" {
+				m.tasks[i].Priority = priority
+			}
+			if dueDate != nil {
+				m.tasks[i].DueDate = dueDate
+			}
+			m.tasks[i].UpdatedAt = time.Now()
 			m.tasks[i].CommentCount = m.getCommentCount(t.ID)
 			return &m.tasks[i]
 		}
@@ -116,8 +126,9 @@ func (m *MockRepository) Update(id, title, description, status string, assigneeI
 
 func (m *MockRepository) UpdateStatus(id, status string) *task.Task {
 	for i, t := range m.tasks {
-		if fmt.Sprintf("%d", t.ID) == id {
+		if t.ID == id {
 			m.tasks[i].Status = status
+			m.tasks[i].UpdatedAt = time.Now()
 			m.tasks[i].CommentCount = m.getCommentCount(t.ID)
 			return &m.tasks[i]
 		}
@@ -125,41 +136,47 @@ func (m *MockRepository) UpdateStatus(id, status string) *task.Task {
 	return nil
 }
 
-func (m *MockRepository) AddComment(taskID, userID int, comment, createdAt string) *task.TaskComment {
+func (m *MockRepository) AddComment(taskID, userID, comment string) *task.TaskComment {
 	commentObj := &task.TaskComment{
-		ID:        len(m.comments) + 1,
+		ID:        "1",
 		TaskID:    taskID,
+		UserID:    userID,
 		Comment:   comment,
-		CreatedAt: createdAt,
-		User: task.CommentUser{
-			ID:       userID,
-			Username: fmt.Sprintf("user%d", userID),
-			Email:    fmt.Sprintf("user%d@test.com", userID),
+		CreatedAt: time.Now(),
+		User: &user.User{
+			ID:        userID,
+			Username:  fmt.Sprintf("user%s", userID),
+			Email:     fmt.Sprintf("user%s@test.com", userID),
+			FirstName: "Test",
+			LastName:  "User",
 		},
 	}
 	m.comments = append(m.comments, *commentObj)
 	return commentObj
 }
 
-func (m *MockRepository) AddAssignment(taskID int, assignType string, assignID int, createdAt string) *task.TaskAssignment {
+func (m *MockRepository) AddAssignment(taskID, assignType, assignID string) *task.TaskAssignment {
 	assignment := &task.TaskAssignment{
-		ID:         len(m.assignments) + 1,
+		ID:         "1",
 		TaskID:     taskID,
 		AssignType: assignType,
 		AssignID:   assignID,
-		CreatedAt:  createdAt,
+		CreatedAt:  time.Now(),
 	}
 
 	if assignType == "user" {
-		assignment.User = &task.CommentUser{
-			ID:       assignID,
-			Username: fmt.Sprintf("user%d", assignID),
-			Email:    fmt.Sprintf("user%d@test.com", assignID),
+		assignment.User = &user.User{
+			ID:        assignID,
+			Username:  fmt.Sprintf("user%s", assignID),
+			Email:     fmt.Sprintf("user%s@test.com", assignID),
+			FirstName: "Test",
+			LastName:  "User",
 		}
 	} else if assignType == "team" {
-		assignment.Team = &task.AssignTeam{
-			ID:   assignID,
-			Name: fmt.Sprintf("Team %d", assignID),
+		assignment.Team = &team.Team{
+			ID:          assignID,
+			Name:        fmt.Sprintf("Team %s", assignID),
+			Description: "Test team",
 		}
 	}
 
@@ -167,7 +184,7 @@ func (m *MockRepository) AddAssignment(taskID int, assignType string, assignID i
 	return assignment
 }
 
-func (m *MockRepository) DeleteAssignment(assignmentID int) error {
+func (m *MockRepository) DeleteAssignment(assignmentID string) error {
 	for i, a := range m.assignments {
 		if a.ID == assignmentID {
 			m.assignments = append(m.assignments[:i], m.assignments[i+1:]...)
@@ -179,7 +196,7 @@ func (m *MockRepository) DeleteAssignment(assignmentID int) error {
 
 func (m *MockRepository) Delete(id string) error {
 	for i, t := range m.tasks {
-		if fmt.Sprintf("%d", t.ID) == id {
+		if t.ID == id {
 			m.tasks = append(m.tasks[:i], m.tasks[i+1:]...)
 			return nil
 		}

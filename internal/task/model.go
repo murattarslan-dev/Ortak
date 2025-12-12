@@ -1,66 +1,66 @@
 package task
 
+import (
+	"ortak/internal/team"
+	"ortak/internal/user"
+	"time"
+)
+
 type Task struct {
-	ID           int              `json:"id"`
+	ID           string           `json:"id"`
 	Title        string           `json:"title"`
 	Description  string           `json:"description"`
 	Status       string           `json:"status"`
-	AssigneeID   int              `json:"assignee_id"`
-	TeamID       int              `json:"team_id"`
 	Tags         []string         `json:"tags"`
+	Priority     string           `json:"priority"`
+	DueDate      *time.Time       `json:"due_date,omitempty"`
+	CreatedAt    time.Time        `json:"created_at"`
+	UpdatedAt    time.Time        `json:"updated_at"`
+	CreatedBy    string           `json:"created_by"`
 	CommentCount int              `json:"comment_count,omitempty"`
 	Comments     []TaskComment    `json:"comments,omitempty"`
 	Assignments  []TaskAssignment `json:"assignments,omitempty"`
 }
 
 type TaskComment struct {
-	ID        int        `json:"id"`
-	TaskID    int        `json:"task_id"`
+	ID        string     `json:"id"`
+	TaskID    string     `json:"task_id"`
+	UserID    string     `json:"user_id"`
 	Comment   string     `json:"comment"`
-	CreatedAt string     `json:"created_at"`
-	User      CommentUser `json:"user"`
-}
-
-type CommentUser struct {
-	ID       int    `json:"id"`
-	Username string `json:"username"`
-	Email    string `json:"email"`
+	CreatedAt time.Time  `json:"created_at"`
+	User      *user.User `json:"user,omitempty"`
 }
 
 type TaskAssignment struct {
-	ID         int          `json:"id"`
-	TaskID     int          `json:"task_id"`
-	AssignType string       `json:"assign_type"`
-	AssignID   int          `json:"assign_id"`
-	CreatedAt  string       `json:"created_at"`
-	User       *CommentUser `json:"user,omitempty"`
-	Team       *AssignTeam  `json:"team,omitempty"`
-}
-
-type AssignTeam struct {
-	ID   int    `json:"id"`
-	Name string `json:"name"`
+	ID         string     `json:"id"`
+	TaskID     string     `json:"task_id"`
+	AssignType string     `json:"assign_type"`
+	AssignID   string     `json:"assign_id"`
+	CreatedAt  time.Time  `json:"created_at"`
+	User       *user.User `json:"user,omitempty"`
+	Team       *team.Team `json:"team,omitempty"`
 }
 
 type AddAssignmentRequest struct {
 	AssignType string `json:"assign_type" binding:"required"`
-	AssignID   int    `json:"assign_id" binding:"required"`
+	AssignID   string `json:"assign_id" binding:"required"`
 }
 
 type CreateTaskRequest struct {
-	Title       string   `json:"title" binding:"required"`
-	Description string   `json:"description"`
-	AssigneeID  int      `json:"assignee_id"`
-	TeamID      int      `json:"team_id" binding:"required"`
-	Tags        []string `json:"tags"`
+	Title       string     `json:"title" binding:"required"`
+	Description string     `json:"description"`
+	Tags        []string   `json:"tags"`
+	Priority    string     `json:"priority"`
+	DueDate     *time.Time `json:"due_date"`
 }
 
 type UpdateTaskRequest struct {
-	Title       string   `json:"title,omitempty"`
-	Description string   `json:"description,omitempty"`
-	Status      string   `json:"status,omitempty"`
-	AssigneeID  int      `json:"assignee_id,omitempty"`
-	Tags        []string `json:"tags,omitempty"`
+	Title       string     `json:"title,omitempty"`
+	Description string     `json:"description,omitempty"`
+	Status      string     `json:"status,omitempty"`
+	Tags        []string   `json:"tags,omitempty"`
+	Priority    string     `json:"priority,omitempty"`
+	DueDate     *time.Time `json:"due_date,omitempty"`
 }
 
 type UpdateTaskStatusRequest struct {

@@ -4,6 +4,7 @@ import (
 	"ortak/internal/task"
 	"ortak/internal/task/repository"
 	"testing"
+	"time"
 )
 
 func TestService_GetTasks(t *testing.T) {
@@ -27,12 +28,12 @@ func TestService_CreateTask(t *testing.T) {
 	req := task.CreateTaskRequest{
 		Title:       "Test Task",
 		Description: "Test Description",
-		AssigneeID:  1,
-		TeamID:      1,
+		Priority:    "high",
+		DueDate:     &time.Time{},
 		Tags:        []string{"backend", "api"},
 	}
 
-	createdTask, err := service.CreateTask(req)
+	createdTask, err := service.CreateTask(req, "user-123")
 	if err != nil {
 		t.Errorf("Expected no error, got %v", err)
 	}
@@ -45,8 +46,8 @@ func TestService_CreateTask(t *testing.T) {
 		t.Errorf("Expected status todo, got %s", createdTask.Status)
 	}
 
-	if createdTask.AssigneeID != 1 {
-		t.Errorf("Expected assignee ID 1, got %d", createdTask.AssigneeID)
+	if createdTask.Priority != "high" {
+		t.Errorf("Expected priority high, got %s", createdTask.Priority)
 	}
 
 	// Verify task was added
@@ -64,18 +65,16 @@ func TestService_UpdateTaskStatus(t *testing.T) {
 	createReq := task.CreateTaskRequest{
 		Title:       "Test Task",
 		Description: "Test Description",
-		AssigneeID:  1,
-		TeamID:      1,
 		Tags:        []string{"test"},
 	}
-	_, _ = service.CreateTask(createReq)
+	createdTask, _ := service.CreateTask(createReq, "user-123")
 
 	// Test valid status update
 	updateReq := task.UpdateTaskStatusRequest{
 		Status: "in_progress",
 	}
 
-	updatedTask, err := service.UpdateTaskStatus("1", updateReq)
+	updatedTask, err := service.UpdateTaskStatus(createdTask.ID, updateReq)
 	if err != nil {
 		t.Errorf("Expected no error, got %v", err)
 	}
@@ -89,13 +88,13 @@ func TestService_UpdateTaskStatus(t *testing.T) {
 		Status: "invalid_status",
 	}
 
-	_, err = service.UpdateTaskStatus("1", invalidReq)
+	_, err = service.UpdateTaskStatus(createdTask.ID, invalidReq)
 	if err == nil {
 		t.Error("Expected error for invalid status, got nil")
 	}
 
 	// Test non-existent task
-	_, err = service.UpdateTaskStatus("999", updateReq)
+	_, err = service.UpdateTaskStatus("non-existent-id", updateReq)
 	if err == nil {
 		t.Error("Expected error for non-existent task, got nil")
 	}
@@ -109,18 +108,16 @@ func TestService_AddComment(t *testing.T) {
 	createReq := task.CreateTaskRequest{
 		Title:       "Test Task",
 		Description: "Test Description",
-		AssigneeID:  1,
-		TeamID:      1,
 		Tags:        []string{"test"},
 	}
-	service.CreateTask(createReq)
+	createdTask, _ := service.CreateTask(createReq, "user-123")
 
 	// Test valid comment
 	commentReq := task.AddCommentRequest{
 		Comment: "This is a test comment",
 	}
 
-	comment, err := service.AddComment("1", 1, commentReq)
+	comment, err := service.AddComment(createdTask.ID, "user-456", commentReq)
 	if err != nil {
 		t.Errorf("Expected no error, got %v", err)
 	}
@@ -129,12 +126,12 @@ func TestService_AddComment(t *testing.T) {
 		t.Errorf("Expected comment 'This is a test comment', got %s", comment.Comment)
 	}
 
-	if comment.TaskID != 1 {
-		t.Errorf("Expected task ID 1, got %d", comment.TaskID)
+	if comment.TaskID != createdTask.ID {
+		t.Errorf("Expected task ID %s, got %s", createdTask.ID, comment.TaskID)
 	}
 
 	// Test non-existent task
-	_, err = service.AddComment("999", 1, commentReq)
+	_, err = service.AddComment("non-existent-id", "user-456", commentReq)
 	if err == nil {
 		t.Error("Expected error for non-existent task, got nil")
 	}
@@ -148,19 +145,17 @@ func TestService_AddAssignment(t *testing.T) {
 	createReq := task.CreateTaskRequest{
 		Title:       "Test Task",
 		Description: "Test Description",
-		AssigneeID:  1,
-		TeamID:      1,
 		Tags:        []string{"test"},
 	}
-	service.CreateTask(createReq)
+	createdTask, _ := service.CreateTask(createReq, "user-123")
 
 	// Test user assignment
 	userAssignReq := task.AddAssignmentRequest{
 		AssignType: "user",
-		AssignID:   5,
+		AssignID:   "user-456",
 	}
 
-	assignment, err := service.AddAssignment("1", userAssignReq)
+	assignment, err := service.AddAssignment(createdTask.ID, userAssignReq)
 	if err != nil {
 		t.Errorf("Expected no error, got %v", err)
 	}
@@ -169,17 +164,17 @@ func TestService_AddAssignment(t *testing.T) {
 		t.Errorf("Expected assign_type 'user', got %s", assignment.AssignType)
 	}
 
-	if assignment.AssignID != 5 {
-		t.Errorf("Expected assign_id 5, got %d", assignment.AssignID)
+	if assignment.AssignID != "user-456" {
+		t.Errorf("Expected assign_id 'user-456', got %s", assignment.AssignID)
 	}
 
 	// Test team assignment
 	teamAssignReq := task.AddAssignmentRequest{
 		AssignType: "team",
-		AssignID:   2,
+		AssignID:   "team-789",
 	}
 
-	teamAssignment, err := service.AddAssignment("1", teamAssignReq)
+	teamAssignment, err := service.AddAssignment(createdTask.ID, teamAssignReq)
 	if err != nil {
 		t.Errorf("Expected no error, got %v", err)
 	}
@@ -191,16 +186,16 @@ func TestService_AddAssignment(t *testing.T) {
 	// Test invalid assign_type
 	invalidReq := task.AddAssignmentRequest{
 		AssignType: "invalid",
-		AssignID:   1,
+		AssignID:   "some-id",
 	}
 
-	_, err = service.AddAssignment("1", invalidReq)
+	_, err = service.AddAssignment(createdTask.ID, invalidReq)
 	if err == nil {
 		t.Error("Expected error for invalid assign_type, got nil")
 	}
 
 	// Test non-existent task
-	_, err = service.AddAssignment("999", userAssignReq)
+	_, err = service.AddAssignment("non-existent-id", userAssignReq)
 	if err == nil {
 		t.Error("Expected error for non-existent task, got nil")
 	}

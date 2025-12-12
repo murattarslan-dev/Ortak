@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"ortak/internal/task"
 	"ortak/internal/task/repository"
-	"time"
 )
 
 type Service struct {
@@ -21,8 +20,12 @@ func (s *Service) GetTasks() ([]task.Task, error) {
 	return s.repo.GetAll(), nil
 }
 
-func (s *Service) CreateTask(req task.CreateTaskRequest) (*task.Task, error) {
-	return s.repo.Create(req.Title, req.Description, req.AssigneeID, req.TeamID, req.Tags), nil
+func (s *Service) CreateTask(req task.CreateTaskRequest, createdBy string) (*task.Task, error) {
+	priority := req.Priority
+	if priority == "" {
+		priority = "medium"
+	}
+	return s.repo.Create(req.Title, req.Description, createdBy, req.Tags, priority, req.DueDate), nil
 }
 
 func (s *Service) GetTaskByID(id string) (*task.Task, error) {
@@ -41,7 +44,7 @@ func (s *Service) UpdateTask(id string, req task.UpdateTaskRequest) (*task.Task,
 
 	// Validate status if provided
 	if req.Status != "" {
-		validStatuses := []string{"todo", "in_progress", "done"}
+		validStatuses := []string{"todo", "in_progress", "done", "cancelled"}
 		valid := false
 		for _, status := range validStatuses {
 			if req.Status == status {
@@ -50,11 +53,26 @@ func (s *Service) UpdateTask(id string, req task.UpdateTaskRequest) (*task.Task,
 			}
 		}
 		if !valid {
-			return nil, fmt.Errorf("invalid status: must be todo, in_progress, or done")
+			return nil, fmt.Errorf("invalid status: must be todo, in_progress, done, or cancelled")
 		}
 	}
 
-	return s.repo.Update(id, req.Title, req.Description, req.Status, req.AssigneeID, req.Tags), nil
+	// Validate priority if provided
+	if req.Priority != "" {
+		validPriorities := []string{"low", "medium", "high", "urgent"}
+		valid := false
+		for _, priority := range validPriorities {
+			if req.Priority == priority {
+				valid = true
+				break
+			}
+		}
+		if !valid {
+			return nil, fmt.Errorf("invalid priority: must be low, medium, high, or urgent")
+		}
+	}
+
+	return s.repo.Update(id, req.Title, req.Description, req.Status, req.Tags, req.Priority, req.DueDate), nil
 }
 
 func (s *Service) UpdateTaskStatus(id string, req task.UpdateTaskStatusRequest) (*task.Task, error) {
@@ -64,7 +82,7 @@ func (s *Service) UpdateTaskStatus(id string, req task.UpdateTaskStatusRequest) 
 	}
 
 	// Validate status
-	validStatuses := []string{"todo", "in_progress", "done"}
+	validStatuses := []string{"todo", "in_progress", "done", "cancelled"}
 	valid := false
 	for _, status := range validStatuses {
 		if req.Status == status {
@@ -73,29 +91,19 @@ func (s *Service) UpdateTaskStatus(id string, req task.UpdateTaskStatusRequest) 
 		}
 	}
 	if !valid {
-		return nil, fmt.Errorf("invalid status: must be todo, in_progress, or done")
+		return nil, fmt.Errorf("invalid status: must be todo, in_progress, done, or cancelled")
 	}
 
 	return s.repo.UpdateStatus(id, req.Status), nil
 }
 
-func (s *Service) AddComment(taskID string, userID int, req task.AddCommentRequest) (*task.TaskComment, error) {
+func (s *Service) AddComment(taskID, userID string, req task.AddCommentRequest) (*task.TaskComment, error) {
 	existingTask := s.repo.GetByID(taskID)
 	if existingTask == nil {
 		return nil, fmt.Errorf("task not found")
 	}
 
-	// Convert taskID to int
-	taskIDInt := 0
-	for i := 1; i <= 1000; i++ {
-		if fmt.Sprintf("%d", i) == taskID {
-			taskIDInt = i
-			break
-		}
-	}
-
-	createdAt := time.Now().Format(time.RFC3339)
-	return s.repo.AddComment(taskIDInt, userID, req.Comment, createdAt), nil
+	return s.repo.AddComment(taskID, userID, req.Comment), nil
 }
 
 func (s *Service) AddAssignment(taskID string, req task.AddAssignmentRequest) (*task.TaskAssignment, error) {
@@ -109,20 +117,10 @@ func (s *Service) AddAssignment(taskID string, req task.AddAssignmentRequest) (*
 		return nil, fmt.Errorf("invalid assign_type: must be user or team")
 	}
 
-	// Convert taskID to int
-	taskIDInt := 0
-	for i := 1; i <= 1000; i++ {
-		if fmt.Sprintf("%d", i) == taskID {
-			taskIDInt = i
-			break
-		}
-	}
-
-	createdAt := time.Now().Format(time.RFC3339)
-	return s.repo.AddAssignment(taskIDInt, req.AssignType, req.AssignID, createdAt), nil
+	return s.repo.AddAssignment(taskID, req.AssignType, req.AssignID), nil
 }
 
-func (s *Service) DeleteAssignment(assignmentID int) error {
+func (s *Service) DeleteAssignment(assignmentID string) error {
 	return s.repo.DeleteAssignment(assignmentID)
 }
 

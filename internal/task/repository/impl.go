@@ -2,8 +2,11 @@ package repository
 
 import (
 	"database/sql"
+	"encoding/json"
 	"ortak/internal/task"
-	"strings"
+	"ortak/internal/team"
+	"ortak/internal/user"
+	"time"
 )
 
 type RepositoryImpl struct {
@@ -17,7 +20,7 @@ func NewRepositoryImpl(database *sql.DB) Repository {
 }
 
 func (r *RepositoryImpl) GetAll() []task.Task {
-	rows, err := r.db.Query("SELECT id, title, description, status, assignee_id, team_id, tags FROM tasks")
+	rows, err := r.db.Query("SELECT id, title, description, status, tags, priority, due_date, created_at, updated_at, created_by FROM tasks")
 	if err != nil {
 		return []task.Task{}
 	}
@@ -26,12 +29,15 @@ func (r *RepositoryImpl) GetAll() []task.Task {
 	var tasks []task.Task
 	for rows.Next() {
 		var t task.Task
-		var tagsStr string
-		rows.Scan(&t.ID, &t.Title, &t.Description, &t.Status, &t.AssigneeID, &t.TeamID, &tagsStr)
-		t.Tags = r.stringToTags(tagsStr)
+		var tagsJSON []byte
+		rows.Scan(&t.ID, &t.Title, &t.Description, &t.Status, &tagsJSON, &t.Priority, &t.DueDate, &t.CreatedAt, &t.UpdatedAt, &t.CreatedBy)
+
+		if tagsJSON != nil {
+			json.Unmarshal(tagsJSON, &t.Tags)
+		}
 
 		var commentCount int
-		r.db.QueryRow("SELECT COUNT(*) FROM task_comments WHERE task_id = ?", t.ID).Scan(&commentCount)
+		r.db.QueryRow("SELECT COUNT(*) FROM task_comments WHERE task_id = $1", t.ID).Scan(&commentCount)
 		t.CommentCount = commentCount
 
 		tasks = append(tasks, t)
@@ -39,43 +45,34 @@ func (r *RepositoryImpl) GetAll() []task.Task {
 	return tasks
 }
 
-func (r *RepositoryImpl) stringToTags(tagStr string) []string {
-	if tagStr == "" {
-		return []string{}
-	}
-	return strings.Split(tagStr, "{$^#}")
-}
+func (r *RepositoryImpl) Create(title, description, createdBy string, tags []string, priority string, dueDate *time.Time) *task.Task {
+	tagsJSON, _ := json.Marshal(tags)
 
-func (r *RepositoryImpl) tagsToString(tags []string) string {
-	return strings.Join(tags, "{$^#}")
-}
-
-func (r *RepositoryImpl) Create(title, description string, assigneeID, teamID int, tags []string) *task.Task {
-	tagsStr := r.tagsToString(tags)
-	result, err := r.db.Exec("INSERT INTO tasks (title, description, status, assignee_id, team_id, tags) VALUES (?, ?, 'todo', ?, ?, ?)",
-		title, description, assigneeID, teamID, tagsStr)
+	var id string
+	err := r.db.QueryRow("INSERT INTO tasks (title, description, status, tags, priority, due_date, created_by) VALUES ($1, $2, 'todo', $3, $4, $5, $6) RETURNING id",
+		title, description, tagsJSON, priority, dueDate, createdBy).Scan(&id)
 	if err != nil {
 		return nil
 	}
-	id, _ := result.LastInsertId()
-	return &task.Task{
-		ID: int(id), Title: title, Description: description, Status: "todo",
-		AssigneeID: assigneeID, TeamID: teamID, Tags: tags, CommentCount: 0,
-	}
+
+	return r.GetByID(id)
 }
 
 func (r *RepositoryImpl) GetByID(id string) *task.Task {
 	var t task.Task
-	var tagsStr string
-	err := r.db.QueryRow("SELECT id, title, description, status, assignee_id, team_id, tags FROM tasks WHERE id = ?", id).
-		Scan(&t.ID, &t.Title, &t.Description, &t.Status, &t.AssigneeID, &t.TeamID, &tagsStr)
+	var tagsJSON []byte
+	err := r.db.QueryRow("SELECT id, title, description, status, tags, priority, due_date, created_at, updated_at, created_by FROM tasks WHERE id = $1", id).
+		Scan(&t.ID, &t.Title, &t.Description, &t.Status, &tagsJSON, &t.Priority, &t.DueDate, &t.CreatedAt, &t.UpdatedAt, &t.CreatedBy)
 	if err != nil {
 		return nil
 	}
-	t.Tags = r.stringToTags(tagsStr)
+
+	if tagsJSON != nil {
+		json.Unmarshal(tagsJSON, &t.Tags)
+	}
 
 	var commentCount int
-	r.db.QueryRow("SELECT COUNT(*) FROM task_comments WHERE task_id = ?", t.ID).Scan(&commentCount)
+	r.db.QueryRow("SELECT COUNT(*) FROM task_comments WHERE task_id = $1", t.ID).Scan(&commentCount)
 	t.CommentCount = commentCount
 
 	return &t
@@ -88,19 +85,22 @@ func (r *RepositoryImpl) GetByIDWithComments(id string) *task.Task {
 	}
 
 	// Get comments
-	rows, _ := r.db.Query(`SELECT tc.id, tc.task_id, tc.comment, tc.created_at, u.id, u.username, u.email 
-		FROM task_comments tc JOIN users u ON tc.user_id = u.id WHERE tc.task_id = ?`, t.ID)
+	rows, _ := r.db.Query(`SELECT tc.id, tc.task_id, tc.user_id, tc.comment, tc.created_at, 
+		u.id, u.username, u.email, u.first_name, u.last_name
+		FROM task_comments tc JOIN users u ON tc.user_id = u.id WHERE tc.task_id = $1`, t.ID)
 	defer rows.Close()
 
 	var comments []task.TaskComment
 	for rows.Next() {
 		var c task.TaskComment
-		rows.Scan(&c.ID, &c.TaskID, &c.Comment, &c.CreatedAt, &c.User.ID, &c.User.Username, &c.User.Email)
+		c.User = &user.User{}
+		rows.Scan(&c.ID, &c.TaskID, &c.UserID, &c.Comment, &c.CreatedAt,
+			&c.User.ID, &c.User.Username, &c.User.Email, &c.User.FirstName, &c.User.LastName)
 		comments = append(comments, c)
 	}
 
 	// Get assignments
-	rows2, _ := r.db.Query("SELECT id, task_id, assign_type, assign_id, created_at FROM task_assignments WHERE task_id = ?", t.ID)
+	rows2, _ := r.db.Query("SELECT id, task_id, assign_type, assign_id, created_at FROM task_assignments WHERE task_id = $1", t.ID)
 	defer rows2.Close()
 
 	var assignments []task.TaskAssignment
@@ -109,15 +109,13 @@ func (r *RepositoryImpl) GetByIDWithComments(id string) *task.Task {
 		rows2.Scan(&a.ID, &a.TaskID, &a.AssignType, &a.AssignID, &a.CreatedAt)
 
 		if a.AssignType == "user" {
-			var user task.CommentUser
-			r.db.QueryRow("SELECT id, username, email FROM users WHERE id = ?", a.AssignID).
-				Scan(&user.ID, &user.Username, &user.Email)
-			a.User = &user
+			a.User = &user.User{}
+			r.db.QueryRow("SELECT id, username, email, first_name, last_name FROM users WHERE id = $1", a.AssignID).
+				Scan(&a.User.ID, &a.User.Username, &a.User.Email, &a.User.FirstName, &a.User.LastName)
 		} else if a.AssignType == "team" {
-			var team task.AssignTeam
-			r.db.QueryRow("SELECT id, name FROM teams WHERE id = ?", a.AssignID).
-				Scan(&team.ID, &team.Name)
-			a.Team = &team
+			a.Team = &team.Team{}
+			r.db.QueryRow("SELECT id, name, description FROM teams WHERE id = $1", a.AssignID).
+				Scan(&a.Team.ID, &a.Team.Name, &a.Team.Description)
 		}
 		assignments = append(assignments, a)
 	}
@@ -128,10 +126,10 @@ func (r *RepositoryImpl) GetByIDWithComments(id string) *task.Task {
 	return t
 }
 
-func (r *RepositoryImpl) Update(id, title, description, status string, assigneeID int, tags []string) *task.Task {
-	tagsStr := r.tagsToString(tags)
-	_, err := r.db.Exec("UPDATE tasks SET title = ?, description = ?, status = ?, assignee_id = ?, tags = ? WHERE id = ?",
-		title, description, status, assigneeID, tagsStr, id)
+func (r *RepositoryImpl) Update(id, title, description, status string, tags []string, priority string, dueDate *time.Time) *task.Task {
+	tagsJSON, _ := json.Marshal(tags)
+	_, err := r.db.Exec("UPDATE tasks SET title = $1, description = $2, status = $3, tags = $4, priority = $5, due_date = $6, updated_at = CURRENT_TIMESTAMP WHERE id = $7",
+		title, description, status, tagsJSON, priority, dueDate, id)
 	if err != nil {
 		return nil
 	}
@@ -139,63 +137,62 @@ func (r *RepositoryImpl) Update(id, title, description, status string, assigneeI
 }
 
 func (r *RepositoryImpl) UpdateStatus(id, status string) *task.Task {
-	_, err := r.db.Exec("UPDATE tasks SET status = ? WHERE id = ?", status, id)
+	_, err := r.db.Exec("UPDATE tasks SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2", status, id)
 	if err != nil {
 		return nil
 	}
 	return r.GetByID(id)
 }
 
-func (r *RepositoryImpl) AddComment(taskID, userID int, comment, createdAt string) *task.TaskComment {
-	result, err := r.db.Exec("INSERT INTO task_comments (task_id, user_id, comment, created_at) VALUES (?, ?, ?, ?)",
-		taskID, userID, comment, createdAt)
+func (r *RepositoryImpl) AddComment(taskID, userID, comment string) *task.TaskComment {
+	var id string
+	err := r.db.QueryRow("INSERT INTO task_comments (task_id, user_id, comment) VALUES ($1, $2, $3) RETURNING id",
+		taskID, userID, comment).Scan(&id)
 	if err != nil {
 		return nil
 	}
-	id, _ := result.LastInsertId()
 
-	var user task.CommentUser
-	r.db.QueryRow("SELECT id, username, email FROM users WHERE id = ?", userID).
-		Scan(&user.ID, &user.Username, &user.Email)
+	u := &user.User{}
+	r.db.QueryRow("SELECT id, username, email, first_name, last_name FROM users WHERE id = $1", userID).
+		Scan(&u.ID, &u.Username, &u.Email, &u.FirstName, &u.LastName)
 
 	return &task.TaskComment{
-		ID: int(id), TaskID: taskID, Comment: comment, CreatedAt: createdAt, User: user,
+		ID: id, TaskID: taskID, UserID: userID, Comment: comment,
+		CreatedAt: time.Now(), User: u,
 	}
 }
 
-func (r *RepositoryImpl) AddAssignment(taskID int, assignType string, assignID int, createdAt string) *task.TaskAssignment {
-	result, err := r.db.Exec("INSERT INTO task_assignments (task_id, assign_type, assign_id, created_at) VALUES (?, ?, ?, ?)",
-		taskID, assignType, assignID, createdAt)
+func (r *RepositoryImpl) AddAssignment(taskID, assignType, assignID string) *task.TaskAssignment {
+	var id string
+	err := r.db.QueryRow("INSERT INTO task_assignments (task_id, assign_type, assign_id) VALUES ($1, $2, $3) RETURNING id",
+		taskID, assignType, assignID).Scan(&id)
 	if err != nil {
 		return nil
 	}
-	id, _ := result.LastInsertId()
 
 	assignment := &task.TaskAssignment{
-		ID: int(id), TaskID: taskID, AssignType: assignType, AssignID: assignID, CreatedAt: createdAt,
+		ID: id, TaskID: taskID, AssignType: assignType, AssignID: assignID, CreatedAt: time.Now(),
 	}
 
 	if assignType == "user" {
-		var user task.CommentUser
-		r.db.QueryRow("SELECT id, username, email FROM users WHERE id = ?", assignID).
-			Scan(&user.ID, &user.Username, &user.Email)
-		assignment.User = &user
+		assignment.User = &user.User{}
+		r.db.QueryRow("SELECT id, username, email, first_name, last_name FROM users WHERE id = $1", assignID).
+			Scan(&assignment.User.ID, &assignment.User.Username, &assignment.User.Email, &assignment.User.FirstName, &assignment.User.LastName)
 	} else if assignType == "team" {
-		var team task.AssignTeam
-		r.db.QueryRow("SELECT id, name FROM teams WHERE id = ?", assignID).
-			Scan(&team.ID, &team.Name)
-		assignment.Team = &team
+		assignment.Team = &team.Team{}
+		r.db.QueryRow("SELECT id, name, description FROM teams WHERE id = $1", assignID).
+			Scan(&assignment.Team.ID, &assignment.Team.Name, &assignment.Team.Description)
 	}
 
 	return assignment
 }
 
-func (r *RepositoryImpl) DeleteAssignment(assignmentID int) error {
-	_, err := r.db.Exec("DELETE FROM task_assignments WHERE id = ?", assignmentID)
+func (r *RepositoryImpl) DeleteAssignment(assignmentID string) error {
+	_, err := r.db.Exec("DELETE FROM task_assignments WHERE id = $1", assignmentID)
 	return err
 }
 
 func (r *RepositoryImpl) Delete(id string) error {
-	_, err := r.db.Exec("DELETE FROM tasks WHERE id = ?", id)
+	_, err := r.db.Exec("DELETE FROM tasks WHERE id = $1", id)
 	return err
 }
