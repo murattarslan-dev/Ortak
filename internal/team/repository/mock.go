@@ -3,6 +3,7 @@ package repository
 import (
 	"fmt"
 	"ortak/internal/team"
+	"time"
 )
 
 type MockRepository struct {
@@ -21,21 +22,33 @@ func (m *MockRepository) GetAll() []team.Team {
 	return m.teams
 }
 
-func (m *MockRepository) Create(name, description string, ownerID int) *team.Team {
+func (m *MockRepository) Create(name, description string, ownerID string) *team.Team {
+	now := time.Now()
 	team := &team.Team{
-		ID:          len(m.teams) + 1,
+		ID:          "2",
 		Name:        name,
 		Description: description,
 		OwnerID:     ownerID,
+		IsActive:    true,
+		CreatedAt:   now,
+		UpdatedAt:   now,
 	}
 	m.teams = append(m.teams, *team)
 	return team
 }
 
 func (m *MockRepository) GetByID(id string) *team.Team {
-	for _, t := range m.teams {
-		if fmt.Sprintf("%d", t.ID) == id {
-			return &t
+	for i, t := range m.teams {
+		if t.ID == id {
+			// Add members to team
+			teamCopy := t
+			for _, member := range m.members {
+				if member.TeamID == id && member.IsActive {
+					teamCopy.Members = append(teamCopy.Members, member)
+				}
+			}
+			m.teams[i] = teamCopy
+			return &teamCopy
 		}
 	}
 	return nil
@@ -43,13 +56,14 @@ func (m *MockRepository) GetByID(id string) *team.Team {
 
 func (m *MockRepository) Update(id, name, description string) *team.Team {
 	for i, t := range m.teams {
-		if fmt.Sprintf("%d", t.ID) == id {
+		if t.ID == id {
 			if name != "" {
 				m.teams[i].Name = name
 			}
 			if description != "" {
 				m.teams[i].Description = description
 			}
+			m.teams[i].UpdatedAt = time.Now()
 			return &m.teams[i]
 		}
 	}
@@ -58,19 +72,19 @@ func (m *MockRepository) Update(id, name, description string) *team.Team {
 
 func (m *MockRepository) Delete(id string) error {
 	for i, t := range m.teams {
-		if fmt.Sprintf("%d", t.ID) == id {
-			m.teams = append(m.teams[:i], m.teams[i+1:]...)
+		if t.ID == id {
+			m.teams[i].IsActive = false
 			return nil
 		}
 	}
 	return fmt.Errorf("team not found")
 }
 
-func (m *MockRepository) AddMember(teamID string, userID int, role string) (*team.TeamMember, error) {
+func (m *MockRepository) AddMember(teamID string, userID string, role string) (*team.TeamMember, error) {
 	// Check if team exists
 	teamExists := false
 	for _, t := range m.teams {
-		if fmt.Sprintf("%d", t.ID) == teamID {
+		if t.ID == teamID {
 			teamExists = true
 			break
 		}
@@ -81,25 +95,17 @@ func (m *MockRepository) AddMember(teamID string, userID int, role string) (*tea
 
 	// Check if member already exists
 	for _, member := range m.members {
-		if fmt.Sprintf("%d", member.TeamID) == teamID && member.UserID == userID {
-			return &member, nil // Already a member
-		}
-	}
-
-	// Convert teamID to int
-	teamIDInt := 0
-	for _, t := range m.teams {
-		if fmt.Sprintf("%d", t.ID) == teamID {
-			teamIDInt = t.ID
-			break
+		if member.TeamID == teamID && member.UserID == userID {
+			return &member, nil
 		}
 	}
 
 	member := team.TeamMember{
-		ID:     len(m.members) + 1,
-		UserID: userID,
-		TeamID: teamIDInt,
-		Role:   role,
+		UserID:   userID,
+		TeamID:   teamID,
+		Role:     role,
+		IsActive: true,
+		JoinedAt: time.Now(),
 	}
 	m.members = append(m.members, member)
 	return &member, nil
@@ -107,8 +113,10 @@ func (m *MockRepository) AddMember(teamID string, userID int, role string) (*tea
 
 func (m *MockRepository) RemoveMember(teamID, userID string) error {
 	for i, member := range m.members {
-		if fmt.Sprintf("%d", member.TeamID) == teamID && fmt.Sprintf("%d", member.UserID) == userID {
-			m.members = append(m.members[:i], m.members[i+1:]...)
+		if member.TeamID == teamID && member.UserID == userID {
+			now := time.Now()
+			m.members[i].IsActive = false
+			m.members[i].LeftAt = &now
 			return nil
 		}
 	}
@@ -117,7 +125,7 @@ func (m *MockRepository) RemoveMember(teamID, userID string) error {
 
 func (m *MockRepository) UpdateMemberRole(teamID, userID, role string) (*team.TeamMember, error) {
 	for i, member := range m.members {
-		if fmt.Sprintf("%d", member.TeamID) == teamID && fmt.Sprintf("%d", member.UserID) == userID {
+		if member.TeamID == teamID && member.UserID == userID {
 			m.members[i].Role = role
 			return &m.members[i], nil
 		}
@@ -128,9 +136,18 @@ func (m *MockRepository) UpdateMemberRole(teamID, userID, role string) (*team.Te
 func (m *MockRepository) GetTeamMembers(teamID string) []team.TeamMember {
 	members := make([]team.TeamMember, 0)
 	for _, member := range m.members {
-		if fmt.Sprintf("%d", member.TeamID) == teamID {
+		if member.TeamID == teamID && member.IsActive {
 			members = append(members, member)
 		}
 	}
 	return members
+}
+
+func (m *MockRepository) GetMember(teamID, userID string) (*team.TeamMember, error) {
+	for _, member := range m.members {
+		if member.TeamID == teamID && member.UserID == userID {
+			return &member, nil
+		}
+	}
+	return nil, fmt.Errorf("member not found")
 }

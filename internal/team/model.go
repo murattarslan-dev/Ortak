@@ -1,10 +1,16 @@
 package team
 
+import "time"
+
 type Team struct {
-	ID          int    `json:"id"`
-	Name        string `json:"name"`
-	Description string `json:"description"`
-	OwnerID     int    `json:"owner_id"`
+	ID          string       `json:"id"`
+	Name        string       `json:"name"`
+	Description string       `json:"description"`
+	OwnerID     string       `json:"owner_id"`
+	IsActive    bool         `json:"is_active"`
+	CreatedAt   time.Time    `json:"created_at"`
+	UpdatedAt   time.Time    `json:"updated_at"`
+	Members     []TeamMember `json:"members,omitempty"`
 }
 
 type CreateTeamRequest struct {
@@ -18,25 +24,20 @@ type UpdateTeamRequest struct {
 }
 
 type TeamMember struct {
-	ID     int    `json:"id"`
-	UserID int    `json:"user_id"`
-	TeamID int    `json:"team_id"`
-	Role   string `json:"role"`
+	UserID    string     `json:"user_id"`
+	TeamID    string     `json:"team_id"`
+	Role      string     `json:"role"`
+	IsActive  bool       `json:"is_active"`
+	JoinedAt  time.Time  `json:"joined_at"`
+	LeftAt    *time.Time `json:"left_at,omitempty"`
+	InvitedBy *string    `json:"invited_by,omitempty"`
 }
 
 type AddMemberRequest struct {
-	UserID int    `json:"user_id" binding:"required"`
+	UserID string `json:"user_id" binding:"required"`
 	Role   string `json:"role" binding:"required"`
 }
 
 type UpdateMemberRoleRequest struct {
 	Role string `json:"role" binding:"required"`
-}
-
-type TeamWithMembers struct {
-	ID          int          `json:"id"`
-	Name        string       `json:"name"`
-	Description string       `json:"description"`
-	OwnerID     int          `json:"owner_id"`
-	Members     []TeamMember `json:"members"`
 }

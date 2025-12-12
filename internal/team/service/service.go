@@ -20,13 +20,15 @@ func (s *Service) GetTeams() ([]team.Team, error) {
 	return s.repo.GetAll(), nil
 }
 
-func (s *Service) CreateTeam(req team.CreateTeamRequest, ownerID int) (*team.Team, error) {
+func (s *Service) CreateTeam(req team.CreateTeamRequest, ownerID string) (*team.Team, error) {
 	// Create the team
 	createdTeam := s.repo.Create(req.Name, req.Description, ownerID)
+	if createdTeam == nil {
+		return nil, fmt.Errorf("failed to create team")
+	}
 	
 	// Add creator as owner member
-	teamID := fmt.Sprintf("%d", createdTeam.ID)
-	s.repo.AddMember(teamID, ownerID, "owner")
+	s.repo.AddMember(createdTeam.ID, ownerID, "owner")
 	
 	return createdTeam, nil
 }
@@ -39,24 +41,9 @@ func (s *Service) GetTeamByID(id string) (*team.Team, error) {
 	return team, nil
 }
 
-func (s *Service) GetTeamWithMembers(id string) (*team.TeamWithMembers, error) {
-	teamData := s.repo.GetByID(id)
-	if teamData == nil {
-		return nil, fmt.Errorf("team not found")
-	}
 
-	members := s.repo.GetTeamMembers(id)
 
-	return &team.TeamWithMembers{
-		ID:          teamData.ID,
-		Name:        teamData.Name,
-		Description: teamData.Description,
-		OwnerID:     teamData.OwnerID,
-		Members:     members,
-	}, nil
-}
-
-func (s *Service) UpdateTeam(id string, req team.UpdateTeamRequest, userID int) (*team.Team, error) {
+func (s *Service) UpdateTeam(id string, req team.UpdateTeamRequest, userID string) (*team.Team, error) {
 	existingTeam := s.repo.GetByID(id)
 	if existingTeam == nil {
 		return nil, fmt.Errorf("team not found")
@@ -70,7 +57,7 @@ func (s *Service) UpdateTeam(id string, req team.UpdateTeamRequest, userID int) 
 	return s.repo.Update(id, req.Name, req.Description), nil
 }
 
-func (s *Service) DeleteTeam(id string, userID int) error {
+func (s *Service) DeleteTeam(id string, userID string) error {
 	existingTeam := s.repo.GetByID(id)
 	if existingTeam == nil {
 		return fmt.Errorf("team not found")
@@ -84,7 +71,7 @@ func (s *Service) DeleteTeam(id string, userID int) error {
 	return s.repo.Delete(id)
 }
 
-func (s *Service) AddTeamMember(teamID string, memberUserID int, role string, requestUserID int) (*team.TeamMember, error) {
+func (s *Service) AddTeamMember(teamID string, memberUserID string, role string, requestUserID string) (*team.TeamMember, error) {
 	// Check if team exists and user is owner
 	existingTeam := s.repo.GetByID(teamID)
 	if existingTeam == nil {
@@ -98,7 +85,7 @@ func (s *Service) AddTeamMember(teamID string, memberUserID int, role string, re
 	return s.repo.AddMember(teamID, memberUserID, role)
 }
 
-func (s *Service) RemoveTeamMember(teamID, memberUserID string, requestUserID int) error {
+func (s *Service) RemoveTeamMember(teamID, memberUserID string, requestUserID string) error {
 	// Check if team exists and user is owner
 	existingTeam := s.repo.GetByID(teamID)
 	if existingTeam == nil {
@@ -112,7 +99,7 @@ func (s *Service) RemoveTeamMember(teamID, memberUserID string, requestUserID in
 	return s.repo.RemoveMember(teamID, memberUserID)
 }
 
-func (s *Service) UpdateMemberRole(teamID, memberUserID, role string, requestUserID int) (*team.TeamMember, error) {
+func (s *Service) UpdateMemberRole(teamID, memberUserID, role string, requestUserID string) (*team.TeamMember, error) {
 	// Check if team exists and user is owner
 	existingTeam := s.repo.GetByID(teamID)
 	if existingTeam == nil {

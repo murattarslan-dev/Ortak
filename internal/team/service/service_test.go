@@ -29,7 +29,7 @@ func TestService_CreateTeam(t *testing.T) {
 		Description: "Test Description",
 	}
 
-	createdTeam, err := service.CreateTeam(req, 1)
+	createdTeam, err := service.CreateTeam(req, "1")
 	if err != nil {
 		t.Errorf("Expected no error, got %v", err)
 	}
@@ -38,8 +38,8 @@ func TestService_CreateTeam(t *testing.T) {
 		t.Errorf("Expected name Test Team, got %s", createdTeam.Name)
 	}
 
-	if createdTeam.OwnerID != 1 {
-		t.Errorf("Expected owner ID 1, got %d", createdTeam.OwnerID)
+	if createdTeam.OwnerID != "1" {
+		t.Errorf("Expected owner ID 1, got %s", createdTeam.OwnerID)
 	}
 
 	// Verify team was added

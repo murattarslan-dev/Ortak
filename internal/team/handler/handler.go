@@ -34,7 +34,7 @@ func (h *Handler) CreateTeam(c *gin.Context) {
 		return
 	}
 
-	userID := c.GetInt("user_id")
+	userID := c.GetString("user_id")
 	team, err := h.service.CreateTeam(req, userID)
 	if err != nil {
 		response.SetError(c, 500, "Failed to create team")
@@ -46,12 +46,12 @@ func (h *Handler) CreateTeam(c *gin.Context) {
 
 func (h *Handler) GetTeam(c *gin.Context) {
 	id := c.Param("id")
-	teamWithMembers, err := h.service.GetTeamWithMembers(id)
+	team, err := h.service.GetTeamByID(id)
 	if err != nil {
 		response.SetError(c, 404, "Team not found")
 		return
 	}
-	response.SetSuccess(c, "Team retrieved successfully", teamWithMembers)
+	response.SetSuccess(c, "Team retrieved successfully", team)
 }
 
 func (h *Handler) UpdateTeam(c *gin.Context) {
@@ -62,7 +62,7 @@ func (h *Handler) UpdateTeam(c *gin.Context) {
 		return
 	}
 
-	userID := c.GetInt("user_id")
+	userID := c.GetString("user_id")
 	team, err := h.service.UpdateTeam(id, req, userID)
 	if err != nil {
 		if err.Error() == "team not found" {
@@ -80,7 +80,7 @@ func (h *Handler) UpdateTeam(c *gin.Context) {
 
 func (h *Handler) DeleteTeam(c *gin.Context) {
 	id := c.Param("id")
-	userID := c.GetInt("user_id")
+	userID := c.GetString("user_id")
 	err := h.service.DeleteTeam(id, userID)
 	if err != nil {
 		if err.Error() == "team not found" {
@@ -104,7 +104,7 @@ func (h *Handler) AddTeamMember(c *gin.Context) {
 		return
 	}
 
-	userID := c.GetInt("user_id")
+	userID := c.GetString("user_id")
 	member, err := h.service.AddTeamMember(teamID, req.UserID, req.Role, userID)
 	if err != nil {
 		if err.Error() == "team not found" {
@@ -123,8 +123,8 @@ func (h *Handler) AddTeamMember(c *gin.Context) {
 func (h *Handler) RemoveTeamMember(c *gin.Context) {
 	teamID := c.Param("id")
 	memberUserID := c.Param("userId")
-	userID := c.GetInt("user_id")
-	
+	userID := c.GetString("user_id")
+
 	err := h.service.RemoveTeamMember(teamID, memberUserID, userID)
 	if err != nil {
 		if err.Error() == "team not found" {
@@ -149,7 +149,7 @@ func (h *Handler) UpdateMemberRole(c *gin.Context) {
 		return
 	}
 
-	userID := c.GetInt("user_id")
+	userID := c.GetString("user_id")
 	member, err := h.service.UpdateMemberRole(teamID, memberUserID, req.Role, userID)
 	if err != nil {
 		if err.Error() == "team not found" {

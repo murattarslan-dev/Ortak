@@ -16,7 +16,7 @@ import (
 
 func TestHandler_GetTeams(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	
+
 	repo := repository.NewMockRepository()
 	svc := service.NewService(repo)
 	handler := NewHandler(svc)
@@ -37,7 +37,7 @@ func TestHandler_GetTeams(t *testing.T) {
 
 func TestHandler_CreateTeam(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	
+
 	repo := repository.NewMockRepository()
 	svc := service.NewService(repo)
 	handler := NewHandler(svc)
@@ -77,14 +77,14 @@ func TestHandler_CreateTeam(t *testing.T) {
 
 func TestHandler_GetTeam(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	
+
 	repo := repository.NewMockRepository()
 	svc := service.NewService(repo)
 	handler := NewHandler(svc)
 
 	// Create a team and add a member
-	repo.Create("Test Team", "Test Description", 1)
-	repo.AddMember("1", 2, "developer")
+	repo.Create("Test Team", "Test Description", "1")
+	repo.AddMember("1", "2", "developer")
 
 	w := httptest.NewRecorder()
 	router := gin.New()
@@ -104,7 +104,7 @@ func TestHandler_GetTeam(t *testing.T) {
 	json.Unmarshal(w.Body.Bytes(), &response)
 	data := response["data"].(map[string]interface{})
 	members := data["members"].([]interface{})
-	
+
 	if len(members) != 1 {
 		t.Errorf("Expected 1 member, got %d", len(members))
 	}
@@ -112,7 +112,7 @@ func TestHandler_GetTeam(t *testing.T) {
 
 func TestHandler_GetTeam_NotFound(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	
+
 	repo := repository.NewMockRepository()
 	svc := service.NewService(repo)
 	handler := NewHandler(svc)
@@ -133,13 +133,13 @@ func TestHandler_GetTeam_NotFound(t *testing.T) {
 
 func TestHandler_UpdateTeam(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	
+
 	repo := repository.NewMockRepository()
 	svc := service.NewService(repo)
 	handler := NewHandler(svc)
 
 	// Create a team first
-	repo.Create("Test Team", "Test Description", 1)
+	repo.Create("Test Team", "Test Description", "1")
 
 	reqData := team.UpdateTeamRequest{
 		Name:        "Updated Team",
@@ -167,13 +167,13 @@ func TestHandler_UpdateTeam(t *testing.T) {
 
 func TestHandler_UpdateTeam_NotOwner(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	
+
 	repo := repository.NewMockRepository()
 	svc := service.NewService(repo)
 	handler := NewHandler(svc)
 
 	// Create a team with owner ID 1
-	repo.Create("Test Team", "Test Description", 1)
+	repo.Create("Test Team", "Test Description", "1")
 
 	reqData := team.UpdateTeamRequest{
 		Name: "Updated Team",
@@ -200,13 +200,13 @@ func TestHandler_UpdateTeam_NotOwner(t *testing.T) {
 
 func TestHandler_DeleteTeam(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	
+
 	repo := repository.NewMockRepository()
 	svc := service.NewService(repo)
 	handler := NewHandler(svc)
 
 	// Create a team first
-	repo.Create("Test Team", "Test Description", 1)
+	repo.Create("Test Team", "Test Description", "1")
 
 	w := httptest.NewRecorder()
 	router := gin.New()
@@ -227,13 +227,13 @@ func TestHandler_DeleteTeam(t *testing.T) {
 
 func TestHandler_DeleteTeam_NotOwner(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	
+
 	repo := repository.NewMockRepository()
 	svc := service.NewService(repo)
 	handler := NewHandler(svc)
 
 	// Create a team with owner ID 1
-	repo.Create("Test Team", "Test Description", 1)
+	repo.Create("Test Team", "Test Description", "1")
 
 	w := httptest.NewRecorder()
 	router := gin.New()
@@ -254,16 +254,16 @@ func TestHandler_DeleteTeam_NotOwner(t *testing.T) {
 
 func TestHandler_AddTeamMember(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	
+
 	repo := repository.NewMockRepository()
 	svc := service.NewService(repo)
 	handler := NewHandler(svc)
 
 	// Create a team first
-	repo.Create("Test Team", "Test Description", 1)
+	repo.Create("Test Team", "Test Description", "1")
 
 	reqData := team.AddMemberRequest{
-		UserID: 2,
+		UserID: "2",
 		Role:   "developer",
 	}
 
@@ -288,16 +288,16 @@ func TestHandler_AddTeamMember(t *testing.T) {
 
 func TestHandler_AddTeamMember_NotOwner(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	
+
 	repo := repository.NewMockRepository()
 	svc := service.NewService(repo)
 	handler := NewHandler(svc)
 
 	// Create a team with owner ID 1
-	repo.Create("Test Team", "Test Description", 1)
+	repo.Create("Test Team", "Test Description", "1")
 
 	reqData := team.AddMemberRequest{
-		UserID: 2,
+		UserID: "2",
 		Role:   "developer",
 	}
 
@@ -322,14 +322,14 @@ func TestHandler_AddTeamMember_NotOwner(t *testing.T) {
 
 func TestHandler_RemoveTeamMember(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	
+
 	repo := repository.NewMockRepository()
 	svc := service.NewService(repo)
 	handler := NewHandler(svc)
 
 	// Create a team and add a member
-	repo.Create("Test Team", "Test Description", 1)
-	repo.AddMember("1", 2, "developer")
+	repo.Create("Test Team", "Test Description", "1")
+	repo.AddMember("1", "2", "developer")
 
 	w := httptest.NewRecorder()
 	router := gin.New()
@@ -350,14 +350,14 @@ func TestHandler_RemoveTeamMember(t *testing.T) {
 
 func TestHandler_UpdateMemberRole(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	
+
 	repo := repository.NewMockRepository()
 	svc := service.NewService(repo)
 	handler := NewHandler(svc)
 
 	// Create a team and add a member
-	repo.Create("Test Team", "Test Description", 1)
-	repo.AddMember("1", 2, "developer")
+	repo.Create("Test Team", "Test Description", "1")
+	repo.AddMember("1", "2", "developer")
 
 	reqData := team.UpdateMemberRoleRequest{
 		Role: "admin",
