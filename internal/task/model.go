@@ -32,7 +32,6 @@ type TaskComment struct {
 }
 
 type TaskAssignment struct {
-	ID         string     `json:"id"`
 	TaskID     string     `json:"task_id"`
 	AssignType string     `json:"assign_type"`
 	AssignID   string     `json:"assign_id"`

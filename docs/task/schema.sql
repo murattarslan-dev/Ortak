@@ -32,12 +32,12 @@ CREATE TABLE task_comments (
 
 -- Task assignments table (for multiple assignees)
 CREATE TABLE task_assignments (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     task_id UUID NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
     assign_type VARCHAR(10) NOT NULL,
     assign_id UUID NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     
+    PRIMARY KEY (task_id, assign_type, assign_id),
     CONSTRAINT chk_task_assignments_type CHECK (assign_type IN ('user', 'team'))
 );
 
@@ -49,8 +49,7 @@ CREATE INDEX idx_tasks_created_by ON tasks(created_by);
 CREATE INDEX idx_tasks_tags ON tasks USING GIN(tags);
 CREATE INDEX idx_task_comments_task_id ON task_comments(task_id);
 CREATE INDEX idx_task_comments_user_id ON task_comments(user_id);
-CREATE INDEX idx_task_assignments_task_id ON task_assignments(task_id);
-CREATE INDEX idx_task_assignments_assign_type_id ON task_assignments(assign_type, assign_id);
+-- task_assignments already has composite primary key, no additional indexes needed
 
 -- Trigger for auto-updating updated_at
 CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -65,3 +64,25 @@ CREATE TRIGGER update_tasks_updated_at
     BEFORE UPDATE ON tasks
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
+
+-- Validation function for task assignments
+CREATE OR REPLACE FUNCTION validate_task_assignment()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.assign_type = 'user' THEN
+        IF NOT EXISTS (SELECT 1 FROM users WHERE id = NEW.assign_id) THEN
+            RAISE EXCEPTION 'User with id % does not exist', NEW.assign_id;
+        END IF;
+    ELSIF NEW.assign_type = 'team' THEN
+        IF NOT EXISTS (SELECT 1 FROM teams WHERE id = NEW.assign_id) THEN
+            RAISE EXCEPTION 'Team with id % does not exist', NEW.assign_id;
+        END IF;
+    END IF;
+    RETURN NEW;
+END;
+$$ language 'plpgsql';
+
+CREATE TRIGGER validate_task_assignment_trigger
+    BEFORE INSERT OR UPDATE ON task_assignments
+    FOR EACH ROW
+    EXECUTE FUNCTION validate_task_assignment();

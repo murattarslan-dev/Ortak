@@ -17,7 +17,7 @@ func NewService(repo repository.Repository) *Service {
 }
 
 func (s *Service) GetTasks() ([]task.Task, error) {
-	return s.repo.GetAll(), nil
+	return s.repo.GetAll()
 }
 
 func (s *Service) CreateTask(req task.CreateTaskRequest, createdBy string) (*task.Task, error) {
@@ -25,21 +25,17 @@ func (s *Service) CreateTask(req task.CreateTaskRequest, createdBy string) (*tas
 	if priority == "" {
 		priority = "medium"
 	}
-	return s.repo.Create(req.Title, req.Description, createdBy, req.Tags, priority, req.DueDate), nil
+	return s.repo.Create(req.Title, req.Description, createdBy, req.Tags, priority, req.DueDate)
 }
 
 func (s *Service) GetTaskByID(id string) (*task.Task, error) {
-	task := s.repo.GetByIDWithComments(id)
-	if task == nil {
-		return nil, fmt.Errorf("task not found")
-	}
-	return task, nil
+	return s.repo.GetByIDWithComments(id)
 }
 
 func (s *Service) UpdateTask(id string, req task.UpdateTaskRequest) (*task.Task, error) {
-	existingTask := s.repo.GetByID(id)
-	if existingTask == nil {
-		return nil, fmt.Errorf("task not found")
+	_, err := s.repo.GetByID(id)
+	if err != nil {
+		return nil, err
 	}
 
 	// Validate status if provided
@@ -72,13 +68,13 @@ func (s *Service) UpdateTask(id string, req task.UpdateTaskRequest) (*task.Task,
 		}
 	}
 
-	return s.repo.Update(id, req.Title, req.Description, req.Status, req.Tags, req.Priority, req.DueDate), nil
+	return s.repo.Update(id, req.Title, req.Description, req.Status, req.Tags, req.Priority, req.DueDate)
 }
 
 func (s *Service) UpdateTaskStatus(id string, req task.UpdateTaskStatusRequest) (*task.Task, error) {
-	existingTask := s.repo.GetByID(id)
-	if existingTask == nil {
-		return nil, fmt.Errorf("task not found")
+	_, err := s.repo.GetByID(id)
+	if err != nil {
+		return nil, err
 	}
 
 	// Validate status
@@ -94,22 +90,22 @@ func (s *Service) UpdateTaskStatus(id string, req task.UpdateTaskStatusRequest) 
 		return nil, fmt.Errorf("invalid status: must be todo, in_progress, done, or cancelled")
 	}
 
-	return s.repo.UpdateStatus(id, req.Status), nil
+	return s.repo.UpdateStatus(id, req.Status)
 }
 
 func (s *Service) AddComment(taskID, userID string, req task.AddCommentRequest) (*task.TaskComment, error) {
-	existingTask := s.repo.GetByID(taskID)
-	if existingTask == nil {
-		return nil, fmt.Errorf("task not found")
+	_, err := s.repo.GetByID(taskID)
+	if err != nil {
+		return nil, err
 	}
 
-	return s.repo.AddComment(taskID, userID, req.Comment), nil
+	return s.repo.AddComment(taskID, userID, req.Comment)
 }
 
 func (s *Service) AddAssignment(taskID string, req task.AddAssignmentRequest) (*task.TaskAssignment, error) {
-	existingTask := s.repo.GetByID(taskID)
-	if existingTask == nil {
-		return nil, fmt.Errorf("task not found")
+	_, err := s.repo.GetByID(taskID)
+	if err != nil {
+		return nil, err
 	}
 
 	// Validate assign_type
@@ -117,17 +113,17 @@ func (s *Service) AddAssignment(taskID string, req task.AddAssignmentRequest) (*
 		return nil, fmt.Errorf("invalid assign_type: must be user or team")
 	}
 
-	return s.repo.AddAssignment(taskID, req.AssignType, req.AssignID), nil
+	return s.repo.AddAssignment(taskID, req.AssignType, req.AssignID)
 }
 
-func (s *Service) DeleteAssignment(assignmentID string) error {
-	return s.repo.DeleteAssignment(assignmentID)
+func (s *Service) DeleteAssignment(taskID, assignType, assignID string) error {
+	return s.repo.DeleteAssignment(taskID, assignType, assignID)
 }
 
 func (s *Service) DeleteTask(id string) error {
-	existingTask := s.repo.GetByID(id)
-	if existingTask == nil {
-		return fmt.Errorf("task not found")
+	_, err := s.repo.GetByID(id)
+	if err != nil {
+		return err
 	}
 
 	return s.repo.Delete(id)

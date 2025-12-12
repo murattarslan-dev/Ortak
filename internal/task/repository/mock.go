@@ -22,14 +22,14 @@ func NewMockRepository() Repository {
 	}
 }
 
-func (m *MockRepository) GetAll() []task.Task {
+func (m *MockRepository) GetAll() ([]task.Task, error) {
 	tasks := make([]task.Task, len(m.tasks))
 	for i, t := range m.tasks {
 		commentCount := m.getCommentCount(t.ID)
 		tasks[i] = t
 		tasks[i].CommentCount = commentCount
 	}
-	return tasks
+	return tasks, nil
 }
 
 func (m *MockRepository) getCommentCount(taskID string) int {
@@ -42,7 +42,7 @@ func (m *MockRepository) getCommentCount(taskID string) int {
 	return count
 }
 
-func (m *MockRepository) Create(title, description, createdBy string, tags []string, priority string, dueDate *time.Time) *task.Task {
+func (m *MockRepository) Create(title, description, createdBy string, tags []string, priority string, dueDate *time.Time) (*task.Task, error) {
 	task := &task.Task{
 		ID:           "1",
 		Title:        title,
@@ -57,21 +57,21 @@ func (m *MockRepository) Create(title, description, createdBy string, tags []str
 		CommentCount: 0,
 	}
 	m.tasks = append(m.tasks, *task)
-	return task
+	return task, nil
 }
 
-func (m *MockRepository) GetByID(id string) *task.Task {
+func (m *MockRepository) GetByID(id string) (*task.Task, error) {
 	for _, t := range m.tasks {
 		if t.ID == id {
 			commentCount := m.getCommentCount(t.ID)
 			t.CommentCount = commentCount
-			return &t
+			return &t, nil
 		}
 	}
-	return nil
+	return nil, fmt.Errorf("task not found")
 }
 
-func (m *MockRepository) GetByIDWithComments(id string) *task.Task {
+func (m *MockRepository) GetByIDWithComments(id string) (*task.Task, error) {
 	for _, t := range m.tasks {
 		if t.ID == id {
 			comments := make([]task.TaskComment, 0)
@@ -89,13 +89,13 @@ func (m *MockRepository) GetByIDWithComments(id string) *task.Task {
 			t.Comments = comments
 			t.CommentCount = len(comments)
 			t.Assignments = assignments
-			return &t
+			return &t, nil
 		}
 	}
-	return nil
+	return nil, fmt.Errorf("task not found")
 }
 
-func (m *MockRepository) Update(id, title, description, status string, tags []string, priority string, dueDate *time.Time) *task.Task {
+func (m *MockRepository) Update(id, title, description, status string, tags []string, priority string, dueDate *time.Time) (*task.Task, error) {
 	for i, t := range m.tasks {
 		if t.ID == id {
 			if title != "" {
@@ -118,25 +118,25 @@ func (m *MockRepository) Update(id, title, description, status string, tags []st
 			}
 			m.tasks[i].UpdatedAt = time.Now()
 			m.tasks[i].CommentCount = m.getCommentCount(t.ID)
-			return &m.tasks[i]
+			return &m.tasks[i], nil
 		}
 	}
-	return nil
+	return nil, fmt.Errorf("task not found")
 }
 
-func (m *MockRepository) UpdateStatus(id, status string) *task.Task {
+func (m *MockRepository) UpdateStatus(id, status string) (*task.Task, error) {
 	for i, t := range m.tasks {
 		if t.ID == id {
 			m.tasks[i].Status = status
 			m.tasks[i].UpdatedAt = time.Now()
 			m.tasks[i].CommentCount = m.getCommentCount(t.ID)
-			return &m.tasks[i]
+			return &m.tasks[i], nil
 		}
 	}
-	return nil
+	return nil, fmt.Errorf("task not found")
 }
 
-func (m *MockRepository) AddComment(taskID, userID, comment string) *task.TaskComment {
+func (m *MockRepository) AddComment(taskID, userID, comment string) (*task.TaskComment, error) {
 	commentObj := &task.TaskComment{
 		ID:        "1",
 		TaskID:    taskID,
@@ -152,12 +152,11 @@ func (m *MockRepository) AddComment(taskID, userID, comment string) *task.TaskCo
 		},
 	}
 	m.comments = append(m.comments, *commentObj)
-	return commentObj
+	return commentObj, nil
 }
 
-func (m *MockRepository) AddAssignment(taskID, assignType, assignID string) *task.TaskAssignment {
+func (m *MockRepository) AddAssignment(taskID, assignType, assignID string) (*task.TaskAssignment, error) {
 	assignment := &task.TaskAssignment{
-		ID:         "1",
 		TaskID:     taskID,
 		AssignType: assignType,
 		AssignID:   assignID,
@@ -181,12 +180,12 @@ func (m *MockRepository) AddAssignment(taskID, assignType, assignID string) *tas
 	}
 
 	m.assignments = append(m.assignments, *assignment)
-	return assignment
+	return assignment, nil
 }
 
-func (m *MockRepository) DeleteAssignment(assignmentID string) error {
+func (m *MockRepository) DeleteAssignment(taskID, assignType, assignID string) error {
 	for i, a := range m.assignments {
-		if a.ID == assignmentID {
+		if a.TaskID == taskID && a.AssignType == assignType && a.AssignID == assignID {
 			m.assignments = append(m.assignments[:i], m.assignments[i+1:]...)
 			return nil
 		}

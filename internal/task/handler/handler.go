@@ -146,7 +146,7 @@ func (h *Handler) AddAssignment(c *gin.Context) {
 		} else if err.Error() == "invalid assign_type: must be user or team" {
 			response.SetError(c, 400, "Invalid assign_type: must be user or team")
 		} else {
-			response.SetError(c, 500, "Failed to add assignment")
+			response.SetError(c, 500, "Failed to add assignment: "+err.Error())
 		}
 		return
 	}
@@ -155,9 +155,11 @@ func (h *Handler) AddAssignment(c *gin.Context) {
 }
 
 func (h *Handler) DeleteAssignment(c *gin.Context) {
-	assignmentID := c.Param("assignmentId")
+	taskID := c.Param("id")
+	assignType := c.Param("assignType")
+	assignID := c.Param("assignId")
 
-	err := h.service.DeleteAssignment(assignmentID)
+	err := h.service.DeleteAssignment(taskID, assignType, assignID)
 	if err != nil {
 		response.SetError(c, 404, "Assignment not found")
 		return

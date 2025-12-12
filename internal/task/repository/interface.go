@@ -6,14 +6,14 @@ import (
 )
 
 type Repository interface {
-	GetAll() []task.Task
-	GetByID(id string) *task.Task
-	GetByIDWithComments(id string) *task.Task
-	Create(title, description, createdBy string, tags []string, priority string, dueDate *time.Time) *task.Task
-	Update(id, title, description, status string, tags []string, priority string, dueDate *time.Time) *task.Task
-	UpdateStatus(id, status string) *task.Task
+	GetAll() ([]task.Task, error)
+	GetByID(id string) (*task.Task, error)
+	GetByIDWithComments(id string) (*task.Task, error)
+	Create(title, description, createdBy string, tags []string, priority string, dueDate *time.Time) (*task.Task, error)
+	Update(id, title, description, status string, tags []string, priority string, dueDate *time.Time) (*task.Task, error)
+	UpdateStatus(id, status string) (*task.Task, error)
 	Delete(id string) error
-	AddComment(taskID, userID, comment string) *task.TaskComment
-	AddAssignment(taskID, assignType, assignID string) *task.TaskAssignment
-	DeleteAssignment(assignmentID string) error
+	AddComment(taskID, userID, comment string) (*task.TaskComment, error)
+	AddAssignment(taskID, assignType, assignID string) (*task.TaskAssignment, error)
+	DeleteAssignment(taskID, assignType, assignID string) error
 }
