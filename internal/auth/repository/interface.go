@@ -1,11 +1,11 @@
 package repository
 
-import "ortak/pkg/utils"
+import "ortak/internal/user"
 
 type Repository interface {
-	GetUserByEmail(email string) *utils.User
-	CreateUser(username, email, hashedPassword string) *utils.User
-	AddToken(token string, userID int)
-	IsTokenValid(token string) (int, bool)
+	GetUserByEmail(email string) *user.User
+	CreateUser(username, email, hashedPassword string) *user.User
+	AddToken(token string, userID string)
+	IsTokenValid(token string) (string, bool)
 	RemoveToken(token string)
 }

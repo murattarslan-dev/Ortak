@@ -21,7 +21,7 @@ func (m *MockRepository) GetAll() []user.User {
 
 func (m *MockRepository) Create(username, email, hashedPassword string) *user.User {
 	user := &user.User{
-		ID:       len(m.users) + 1,
+		ID:       "2",
 		Username: username,
 		Email:    email,
 	}

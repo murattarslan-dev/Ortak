@@ -1,170 +1,111 @@
 package repository
 
 import (
-	"fmt"
+	"database/sql"
 	"ortak/internal/team"
-	"ortak/pkg/utils"
 )
 
 type RepositoryImpl struct {
-	storage *utils.MemoryStorage
+	db *sql.DB
 }
 
-func NewRepositoryImpl() Repository {
+func NewRepositoryImpl(database *sql.DB) Repository {
 	return &RepositoryImpl{
-		storage: utils.GetMemoryStorage(),
+		db: database,
 	}
 }
 
 func (r *RepositoryImpl) GetAll() []team.Team {
-	storageTeams := r.storage.GetAllTeams()
-	teams := make([]team.Team, len(storageTeams))
-	for i, t := range storageTeams {
-		teams[i] = team.Team{
-			ID:          t.ID,
-			Name:        t.Name,
-			Description: t.Description,
-			OwnerID:     t.OwnerID,
-		}
+	rows, err := r.db.Query("SELECT id, name, description, owner_id FROM teams")
+	if err != nil {
+		return []team.Team{}
+	}
+	defer rows.Close()
+
+	var teams []team.Team
+	for rows.Next() {
+		var t team.Team
+		rows.Scan(&t.ID, &t.Name, &t.Description, &t.OwnerID)
+		teams = append(teams, t)
 	}
 	return teams
 }
 
 func (r *RepositoryImpl) Create(name, description string, ownerID int) *team.Team {
-	storageTeam := r.storage.CreateTeam(name, description, ownerID)
-	return &team.Team{
-		ID:          storageTeam.ID,
-		Name:        storageTeam.Name,
-		Description: storageTeam.Description,
-		OwnerID:     storageTeam.OwnerID,
+	result, err := r.db.Exec("INSERT INTO teams (name, description, owner_id) VALUES (?, ?, ?)", name, description, ownerID)
+	if err != nil {
+		return nil
 	}
+	id, _ := result.LastInsertId()
+	return &team.Team{ID: int(id), Name: name, Description: description, OwnerID: ownerID}
 }
 
 func (r *RepositoryImpl) GetByID(id string) *team.Team {
-	storageTeam := r.storage.GetTeamByID(id)
-	if storageTeam == nil {
+	var t team.Team
+	err := r.db.QueryRow("SELECT id, name, description, owner_id FROM teams WHERE id = ?", id).
+		Scan(&t.ID, &t.Name, &t.Description, &t.OwnerID)
+	if err != nil {
 		return nil
 	}
-	return &team.Team{
-		ID:          storageTeam.ID,
-		Name:        storageTeam.Name,
-		Description: storageTeam.Description,
-		OwnerID:     storageTeam.OwnerID,
-	}
+	return &t
 }
 
 func (r *RepositoryImpl) Update(id, name, description string) *team.Team {
-	storageTeam := r.storage.UpdateTeam(id, name, description)
-	if storageTeam == nil {
+	_, err := r.db.Exec("UPDATE teams SET name = ?, description = ? WHERE id = ?", name, description, id)
+	if err != nil {
 		return nil
 	}
-	return &team.Team{
-		ID:          storageTeam.ID,
-		Name:        storageTeam.Name,
-		Description: storageTeam.Description,
-		OwnerID:     storageTeam.OwnerID,
-	}
+	return r.GetByID(id)
 }
 
 func (r *RepositoryImpl) Delete(id string) error {
-	return r.storage.DeleteTeam(id)
+	_, err := r.db.Exec("DELETE FROM teams WHERE id = ?", id)
+	return err
 }
 
 func (r *RepositoryImpl) AddMember(teamID string, userID int, role string) (*team.TeamMember, error) {
-	// Convert teamID to int
+	result, err := r.db.Exec("INSERT INTO team_members (user_id, team_id, role) VALUES (?, ?, ?)", userID, teamID, role)
+	if err != nil {
+		return nil, err
+	}
+	id, _ := result.LastInsertId()
 	teamIDInt := 0
-	for i := range r.storage.GetAllTeams() {
-		if fmt.Sprintf("%d", i+1) == teamID {
-			teamIDInt = i + 1
-			break
-		}
-	}
-	if teamIDInt == 0 {
-		return nil, fmt.Errorf("team not found")
-	}
-
-	storageMember := r.storage.AddTeamMember(userID, teamIDInt, role)
-	return &team.TeamMember{
-		ID:     storageMember.ID,
-		UserID: storageMember.UserID,
-		TeamID: storageMember.TeamID,
-		Role:   storageMember.Role,
-	}, nil
+	r.db.QueryRow("SELECT id FROM teams WHERE id = ?", teamID).Scan(&teamIDInt)
+	return &team.TeamMember{ID: int(id), UserID: userID, TeamID: teamIDInt, Role: role}, nil
 }
 
 func (r *RepositoryImpl) RemoveMember(teamID, userID string) error {
-	// Convert IDs to int
-	teamIDInt := 0
-	userIDInt := 0
-	
-	for i := range r.storage.GetAllTeams() {
-		if fmt.Sprintf("%d", i+1) == teamID {
-			teamIDInt = i + 1
-			break
-		}
-	}
-	
-	for i := range r.storage.GetAllUsers() {
-		if fmt.Sprintf("%d", i+1) == userID {
-			userIDInt = i + 1
-			break
-		}
-	}
-
-	return r.storage.RemoveTeamMember(userIDInt, teamIDInt)
+	_, err := r.db.Exec("DELETE FROM team_members WHERE team_id = ? AND user_id = ?", teamID, userID)
+	return err
 }
 
 func (r *RepositoryImpl) UpdateMemberRole(teamID, userID, role string) (*team.TeamMember, error) {
-	// Convert IDs to int
-	teamIDInt := 0
-	userIDInt := 0
-	
-	for i := range r.storage.GetAllTeams() {
-		if fmt.Sprintf("%d", i+1) == teamID {
-			teamIDInt = i + 1
-			break
-		}
-	}
-	
-	for i := range r.storage.GetAllUsers() {
-		if fmt.Sprintf("%d", i+1) == userID {
-			userIDInt = i + 1
-			break
-		}
+	_, err := r.db.Exec("UPDATE team_members SET role = ? WHERE team_id = ? AND user_id = ?", role, teamID, userID)
+	if err != nil {
+		return nil, err
 	}
 
-	storageMember := r.storage.UpdateMemberRole(userIDInt, teamIDInt, role)
-	if storageMember == nil {
-		return nil, fmt.Errorf("member not found")
+	var member team.TeamMember
+	err = r.db.QueryRow("SELECT id, user_id, team_id, role FROM team_members WHERE team_id = ? AND user_id = ?", teamID, userID).
+		Scan(&member.ID, &member.UserID, &member.TeamID, &member.Role)
+	if err != nil {
+		return nil, err
 	}
-	
-	return &team.TeamMember{
-		ID:     storageMember.ID,
-		UserID: storageMember.UserID,
-		TeamID: storageMember.TeamID,
-		Role:   storageMember.Role,
-	}, nil
+	return &member, nil
 }
 
 func (r *RepositoryImpl) GetTeamMembers(teamID string) []team.TeamMember {
-	// Convert teamID to int
-	teamIDInt := 0
-	for i := range r.storage.GetAllTeams() {
-		if fmt.Sprintf("%d", i+1) == teamID {
-			teamIDInt = i + 1
-			break
-		}
+	rows, err := r.db.Query("SELECT id, user_id, team_id, role FROM team_members WHERE team_id = ?", teamID)
+	if err != nil {
+		return []team.TeamMember{}
 	}
+	defer rows.Close()
 
-	storageMembers := r.storage.GetTeamMembers(teamIDInt)
-	members := make([]team.TeamMember, len(storageMembers))
-	for i, m := range storageMembers {
-		members[i] = team.TeamMember{
-			ID:     m.ID,
-			UserID: m.UserID,
-			TeamID: m.TeamID,
-			Role:   m.Role,
-		}
+	var members []team.TeamMember
+	for rows.Next() {
+		var m team.TeamMember
+		rows.Scan(&m.ID, &m.UserID, &m.TeamID, &m.Role)
+		members = append(members, m)
 	}
 	return members
 }

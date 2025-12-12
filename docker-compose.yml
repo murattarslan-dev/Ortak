@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: ortak_postgres
+    environment:
+      POSTGRES_USER: ortak_user
+      POSTGRES_PASSWORD: ortak2024!
+      POSTGRES_DB: ortak_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    networks:
+      - ortak_network
+
+  api:
+    build: .
+    container_name: ortak_api
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: ortak_user
+      DB_PASSWORD: ortak2024!
+      DB_NAME: ortak_db
+      JWT_SECRET: your-secret-key-change-this-in-production
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres
+    restart: unless-stopped
+    networks:
+      - ortak_network
+
+volumes:
+  postgres_data:
+
+networks:
+  ortak_network:
+    driver: bridge

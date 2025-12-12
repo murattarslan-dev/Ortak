@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"database/sql"
 	"net/http"
 	"ortak/pkg/response"
 	"ortak/pkg/utils"
@@ -9,7 +10,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func AuthMiddleware() gin.HandlerFunc {
+func AuthMiddleware(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
@@ -32,9 +33,10 @@ func AuthMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		storage := utils.GetMemoryStorage()
-		userID, exists := storage.IsTokenValid(tokenString)
-		if !exists || userID != claims.UserID {
+		// Check token in database
+		var userID string
+		err = db.QueryRow("SELECT user_id FROM tokens WHERE token = $1", tokenString).Scan(&userID)
+		if err != nil || userID != claims.UserID {
 			c.JSON(http.StatusUnauthorized, response.Response{
 				Success: false,
 				Message: "Token not found or invalid",

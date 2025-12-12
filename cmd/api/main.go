@@ -43,19 +43,19 @@ func main() {
 	r.Use(middleware.ErrorMiddleware())
 	r.Use(middleware.FormatterMiddleware())
 
-	authRepo := authRepository.NewRepositoryImpl()
+	authRepo := authRepository.NewRepositoryImpl(database)
 	authService := authService.NewService(authRepo)
 	authHandler := authHandler.NewHandler(authService)
 
-	userRepo := userRepository.NewRepositoryImpl()
+	userRepo := userRepository.NewRepositoryImpl(database)
 	userService := userService.NewService(userRepo)
 	userHandler := userHandler.NewHandler(userService)
 
-	teamRepo := teamRepository.NewRepositoryImpl()
+	teamRepo := teamRepository.NewRepositoryImpl(database)
 	teamService := teamService.NewService(teamRepo)
 	teamHandler := teamHandler.NewHandler(teamService)
 
-	taskRepo := taskRepository.NewRepositoryImpl()
+	taskRepo := taskRepository.NewRepositoryImpl(database)
 	taskService := taskService.NewService(taskRepo)
 	taskHandler := taskHandler.NewHandler(taskService)
 
@@ -78,7 +78,7 @@ func main() {
 			})
 		})
 		protected := api.Group("/")
-		protected.Use(middleware.AuthMiddleware())
+		protected.Use(middleware.AuthMiddleware(database))
 		{
 			protected.POST("/logout", authHandler.Logout)
 			protected.GET("/users", userHandler.GetUsers)
