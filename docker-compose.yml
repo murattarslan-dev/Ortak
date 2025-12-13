@@ -26,8 +26,13 @@ services:
       DB_PASSWORD: ortak2024!
       DB_NAME: ortak_db
       JWT_SECRET: your-secret-key-change-this-in-production
+      UPLOAD_DIR: /app/uploads
+      MAX_FILE_SIZE: 50MB
+      BASE_URL: http://localhost:8080
     ports:
       - "8080:8080"
+    volumes:
+      - upload_data:/app/uploads
     depends_on:
       - postgres
     restart: unless-stopped
@@ -36,6 +41,7 @@ services:
 
 volumes:
   postgres_data:
+  upload_data:
 
 networks:
   ortak_network:

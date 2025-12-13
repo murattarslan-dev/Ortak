@@ -46,6 +46,7 @@ func AuthMiddleware(db *sql.DB) gin.HandlerFunc {
 		}
 
 		c.Set("user_id", claims.UserID)
+		c.Set("user_role", claims.Role)
 		c.Next()
 	}
 }

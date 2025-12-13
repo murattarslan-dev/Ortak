@@ -13,9 +13,14 @@ import (
 	teamHandler "ortak/internal/team/handler"
 	teamRepository "ortak/internal/team/repository"
 	teamService "ortak/internal/team/service"
+	uploadHandler "ortak/internal/upload"
+	uploadRepository "ortak/internal/upload/repository"
+	uploadService "ortak/internal/upload/service"
 	userHandler "ortak/internal/user/handler"
 	userRepository "ortak/internal/user/repository"
 	userService "ortak/internal/user/service"
+	"os"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
@@ -58,6 +63,24 @@ func main() {
 	taskRepo := taskRepository.NewRepositoryImpl(database)
 	taskService := taskService.NewService(taskRepo)
 	taskHandler := taskHandler.NewHandler(taskService)
+
+	uploadDir := os.Getenv("UPLOAD_DIR")
+	if uploadDir == "" {
+		uploadDir = "./uploads"
+	}
+	maxSizeStr := os.Getenv("MAX_FILE_SIZE")
+	maxSize := int64(50 * 1024 * 1024) // 50MB default
+	if maxSizeStr != "" {
+		if size, err := strconv.ParseInt(maxSizeStr, 10, 64); err == nil {
+			maxSize = size
+		}
+	}
+	uploadRepo := uploadRepository.NewRepositoryImpl(database)
+	uploadService := uploadService.NewService(uploadRepo)
+	uploadHandler := uploadHandler.NewHandler(uploadDir, maxSize, uploadService)
+
+	// Public file serving
+	r.Static("/uploads", uploadDir)
 
 	api := r.Group("/api/v1")
 	{
@@ -103,6 +126,8 @@ func main() {
 			protected.POST("/tasks/:id/assignments", taskHandler.AddAssignment)
 			protected.DELETE("/tasks/:id/assignments/:assignType/:assignId", taskHandler.DeleteAssignment)
 			protected.DELETE("/tasks/:id", taskHandler.DeleteTask)
+			protected.POST("/upload", uploadHandler.UploadFile)
+			protected.GET("/uploads", uploadHandler.GetUploadInfo)
 		}
 	}
 

@@ -29,7 +29,7 @@ func (s *Service) Register(req auth.RegisterRequest) (*auth.AuthResponse, error)
 
 	user := s.repo.CreateUser(req.Username, req.Email, hashedPassword)
 
-	token, err := utils.GenerateToken(user.ID)
+	token, err := utils.GenerateToken(user.ID, user.Role)
 	if err != nil {
 		return nil, err
 	}
@@ -42,6 +42,7 @@ func (s *Service) Register(req auth.RegisterRequest) (*auth.AuthResponse, error)
 			ID:       user.ID,
 			Username: user.Username,
 			Email:    user.Email,
+			Role:     user.Role,
 		},
 	}, nil
 }
@@ -61,7 +62,7 @@ func (s *Service) Login(req auth.LoginRequest) (*auth.AuthResponse, error) {
 		return nil, errors.New("invalid credentials")
 	}
 
-	token, err := utils.GenerateToken(user.ID)
+	token, err := utils.GenerateToken(user.ID, user.Role)
 	if err != nil {
 		return nil, err
 	}
@@ -74,6 +75,7 @@ func (s *Service) Login(req auth.LoginRequest) (*auth.AuthResponse, error) {
 			ID:       user.ID,
 			Username: user.Username,
 			Email:    user.Email,
+			Role:     user.Role,
 		},
 	}, nil
 }
